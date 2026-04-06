@@ -18,8 +18,8 @@
 
 **Purpose**: Create the file structure and skeleton. No user-visible behaviour yet.
 
-- [ ] T001 Create directory `public/tools/tmm/` and skeleton file `public/tools/tmm/index.html` with valid HTML5 boilerplate (doctype, `<meta charset>`, viewport, title "TMM — Time Management Matrix", empty `<body>`)
-- [ ] T002 Add TMM tool link to the suite launcher at `public/index.html` (consistent with existing COER link style)
+- [X] T001 Create directory `public/tools/tmm/` and skeleton file `public/tools/tmm/index.html` with valid HTML5 boilerplate (doctype, `<meta charset>`, viewport, title "TMM — Time Management Matrix", empty `<body>`)
+- [X] T002 Add TMM tool link to the suite launcher at `public/index.html` (consistent with existing COER link style)
 
 ---
 
@@ -29,10 +29,10 @@
 
 **⚠️ CRITICAL**: Phases 3–7 cannot start until T003–T006 are complete.
 
-- [ ] T003 Implement in-memory state object (`initiatives[]`, `loadedProjectFile`, `selectedInitiativeId`, `isEditing`) and stub `renderCanvas()` dispatcher function that iterates `initiatives[]` and syncs DOM in `public/tools/tmm/index.html`
-- [ ] T004 [P] Implement `generateUUID()` function (UUID v4 — matches regex `/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`) inline in `public/tools/tmm/index.html`
-- [ ] T005 [P] Implement HTML skeleton: toolbar `<header>` (Add, Save, Load buttons), canvas container `<div id="canvas">`, hidden detail panel `<aside id="detail-panel">`, hidden add-initiative `<dialog>` or modal overlay in `public/tools/tmm/index.html`
-- [ ] T006 Implement CSS foundation: custom properties (`--color-q1` through `--color-q4`, spacing, typography), four-quadrant grid layout using CSS Grid with Impact (Y) and Urgency (X) axis labels, quadrant headings (Q1 Do / Q2 Plan / Q3 Delegate / Q4 Eliminate), and canvas `position: relative` overflow boundary in `public/tools/tmm/index.html`
+- [X] T003 Implement in-memory state object (`initiatives[]`, `loadedProjectFile`, `selectedInitiativeId`, `isEditing`) and stub `renderCanvas()` dispatcher function that iterates `initiatives[]` and syncs DOM in `public/tools/tmm/index.html`
+- [X] T004 [P] Implement `generateUUID()` function (UUID v4 — matches regex `/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i`) inline in `public/tools/tmm/index.html`
+- [X] T005 [P] Implement HTML skeleton: toolbar `<header>` (Add, Save, Load buttons), canvas container `<div id="canvas">`, hidden detail panel `<aside id="detail-panel">`, hidden add-initiative `<dialog>` or modal overlay in `public/tools/tmm/index.html`
+- [X] T006 Implement CSS foundation: custom properties (`--color-q1` through `--color-q4`, spacing, typography), four-quadrant grid layout using CSS Grid with Impact (Y) and Urgency (X) axis labels, quadrant headings (Q1 Do / Q2 Plan / Q3 Delegate / Q4 Eliminate), and canvas `position: relative` overflow boundary in `public/tools/tmm/index.html`
 
 **Checkpoint**: Foundation complete — US1, US4, US2, US5, US3 phases can now begin sequentially in priority order
 
@@ -44,11 +44,11 @@
 
 **Independent Test**: Open `public/tools/tmm/index.html`, click "Add Initiative", enter a name, category, and details text, submit the form — a labelled dot appears at canvas centre. Click the dot — a detail panel opens showing name, category, and details. Close the panel — canvas restores with the dot in place.
 
-- [ ] T007 [US1] Implement "Add Initiative" toolbar button that opens the modal form with three fields: Name (`<input type="text">`, required), Category (`<input type="text">`, optional free text), and Details (`<textarea>`, optional multi-line) in `public/tools/tmm/index.html`
-- [ ] T008 [US1] Implement form submission handler: validate Name non-empty (block submit + show inline error if empty), generate UUID v4 id, create initiative object `{ id, name, coer: null, sob: null, memoryMap: null, impactMap: null, tmm: { category: "", details: "", x: 0.5, y: 0.5 } }` where `category` and `details` are populated from the form fields inside the `tmm` section (not at initiative level), push to `initiatives[]`, close modal, call `renderCanvas()` in `public/tools/tmm/index.html`
-- [ ] T009 [US1] Implement `renderCanvas()`: for each initiative, create an absolutely-positioned dot `<div class="dot">` at `left = x * 100%`, `top = (1 - y) * 100%`, with a visible name label using CSS `text-overflow: ellipsis` (max visual width ~30 chars); bind click handler per dot in `public/tools/tmm/index.html`
-- [ ] T010 [US1] Implement dot click handler: set `selectedInitiativeId`, populate detail panel `<aside>` with initiative name, category, and details (read-only view mode), make panel visible — canvas and all other dots remain visible behind the panel in `public/tools/tmm/index.html`
-- [ ] T011 [US1] Implement detail panel close button: clear `selectedInitiativeId`, set `isEditing = false`, hide panel, return canvas to full view — all dots remain in their last positions in `public/tools/tmm/index.html`
+- [X] T007 [US1] Implement "Add Initiative" toolbar button that opens the modal form with three fields: Name (`<input type="text">`, required), Category (`<input type="text">`, optional free text), and Details (`<textarea>`, optional multi-line) in `public/tools/tmm/index.html`
+- [X] T008 [US1] Implement form submission handler: validate Name non-empty (block submit + show inline error if empty), generate UUID v4 id, create initiative object `{ id, name, coer: null, sob: null, memoryMap: null, impactMap: null, tmm: { category: "", details: "", x: 0.5, y: 0.5 } }` where `category` and `details` are populated from the form fields inside the `tmm` section (not at initiative level), push to `initiatives[]`, close modal, call `renderCanvas()` in `public/tools/tmm/index.html`
+- [X] T009 [US1] Implement `renderCanvas()`: for each initiative, create an absolutely-positioned dot `<div class="dot">` at `left = x * 100%`, `top = (1 - y) * 100%`, with a visible name label using CSS `text-overflow: ellipsis` (max visual width ~30 chars); bind click handler per dot in `public/tools/tmm/index.html`
+- [X] T010 [US1] Implement dot click handler: set `selectedInitiativeId`, populate detail panel `<aside>` with initiative name, category, and details (read-only view mode), make panel visible — canvas and all other dots remain visible behind the panel in `public/tools/tmm/index.html`
+- [X] T011 [US1] Implement detail panel close button: clear `selectedInitiativeId`, set `isEditing = false`, hide panel, return canvas to full view — all dots remain in their last positions in `public/tools/tmm/index.html`
 
 **Checkpoint**: User Story 1 fully functional — shippable MVP (canvas, add, dot render, detail view, close panel)
 
@@ -60,10 +60,10 @@
 
 **Independent Test**: Add two initiatives, position one by editing x/y manually, click "Save" — browser prompts for file save. Reload the tool, click "Load", pick the saved file — both dots appear at their saved positions with all fields intact. Open the JSON — `effectivenessToolkit` envelope is present with correct structure.
 
-- [ ] T012 [US4] Implement "Save" toolbar button and save action: build `effectivenessToolkit` JSON envelope (`version: "1.0"`, `lastModified: new Date().toISOString()`, `initiatives: [...]`); for each in-memory initiative merge updated `tmm` section (`category`, `details`, `x`, `y`) with any existing sections from `loadedProjectFile`; trigger download via `Blob` + hidden `<a download>` in `public/tools/tmm/index.html`
-- [ ] T013 [US4] Implement round-trip preservation in the serialiser: when building the save payload, copy each initiative's `coer`, `sob`, `memoryMap`, and `impactMap` from `loadedProjectFile` unchanged (or `null` for new initiatives); the TMM tool MUST NOT alter or default any non-`tmm` section (Constitution Principle VI) in `public/tools/tmm/index.html`
-- [ ] T014 [US4] Implement "Load" toolbar button and load action: open file picker via `<input type="file" accept=".json">`, read file with FileReader, parse JSON, store full parsed object in `loadedProjectFile`, extract `initiatives[]` and their `tmm` sections into in-memory state, call `renderCanvas()` in `public/tools/tmm/index.html`
-- [ ] T015 [US4] Handle load edge cases: no `tmm` key on an initiative → skip that initiative's tmm data (no crash); missing or empty `initiatives` array → render empty canvas silently; unknown extra fields within any `tmm` section → preserved in `loadedProjectFile` and written back on next save; invalid JSON → show brief console.error, no user-facing crash in `public/tools/tmm/index.html`
+- [X] T012 [US4] Implement "Save" toolbar button and save action: build `effectivenessToolkit` JSON envelope (`version: "1.0"`, `lastModified: new Date().toISOString()`, `initiatives: [...]`); for each in-memory initiative merge updated `tmm` section (`category`, `details`, `x`, `y`) with any existing sections from `loadedProjectFile`; trigger download via `Blob` + hidden `<a download>` in `public/tools/tmm/index.html`
+- [X] T013 [US4] Implement round-trip preservation in the serialiser: when building the save payload, copy each initiative's `coer`, `sob`, `memoryMap`, and `impactMap` from `loadedProjectFile` unchanged (or `null` for new initiatives); the TMM tool MUST NOT alter or default any non-`tmm` section (Constitution Principle VI) in `public/tools/tmm/index.html`
+- [X] T014 [US4] Implement "Load" toolbar button and load action: open file picker via `<input type="file" accept=".json">`, read file with FileReader, parse JSON, store full parsed object in `loadedProjectFile`, extract `initiatives[]` and their `tmm` sections into in-memory state, call `renderCanvas()` in `public/tools/tmm/index.html`
+- [X] T015 [US4] Handle load edge cases: no `tmm` key on an initiative → skip that initiative's tmm data (no crash); missing or empty `initiatives` array → render empty canvas silently; unknown extra fields within any `tmm` section → preserved in `loadedProjectFile` and written back on next save; invalid JSON → show brief console.error, no user-facing crash in `public/tools/tmm/index.html`
 
 **Checkpoint**: User Stories 1 + 4 complete — canvas work survives tab close (P1 shippable pair)
 
