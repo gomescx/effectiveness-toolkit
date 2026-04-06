@@ -149,7 +149,7 @@ A PEP coach or executive opens the detail panel for an existing initiative and e
 
 - **FR-US4.01**: The tool MUST provide a "Save" action that writes the full canvas state to a JSON project file via the browser's file-save mechanism.
 - **FR-US4.02**: The saved JSON MUST use the `effectivenessToolkit` envelope: `{ "effectivenessToolkit": { "version": "1.0", "lastModified": "<ISO 8601>", "initiatives": [...] } }`.
-- **FR-US4.03**: Each initiative in the `initiatives` array MUST include a `tmm` section containing: `id` (unique string), `name` (string), `category` (string), `details` (string), `x` (number, normalised 0.0–1.0), `y` (number, normalised 0.0–1.0).
+- **FR-US4.03**: Each initiative in the `initiatives` array MUST have `id` (unique string) and `name` (string) at the initiative level (not inside the `tmm` section). The `tmm` section MUST contain only TMM-specific fields: `category` (string), `details` (string), `x` (number, normalised 0.0–1.0), `y` (number, normalised 0.0–1.0).
 - **FR-US4.04**: The tool MUST provide a "Load" action that reads a JSON project file from the user's file system and restores all initiatives and their positions onto the canvas.
 - **FR-US4.05**: On load, the tool MUST NOT modify or discard sections of the project file belonging to other tools (`coer`, `sob`, `memoryMap`, `impactMap`); those sections MUST be written back unchanged on the next save (Constitution Principle VI).
 - **FR-US4.06**: If a loaded project file contains no `tmm` section or an empty `initiatives` array, the tool MUST display an empty canvas with no error shown to the user.
