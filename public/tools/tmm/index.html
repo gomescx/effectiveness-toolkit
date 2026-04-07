@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TMM — Time Management Matrix</title>
+    <style>
+      /* ── Custom properties ─────────────────────────────────────────────── */
+      :root {
+        --color-bg:       #f5f5f5;
+        --color-surface:  #ffffff;
+        --color-border:   #e0e0e0;
+        --color-label:    #333333;
+        --color-muted:    #666666;
+        --color-primary:  #2563eb;
+        --color-primary-hover: #1d4ed8;
+        --color-danger:   #dc2626;
+        --color-danger-hover: #b91c1c;
+        --radius:         6px;
+        --shadow-sm:      0 1px 3px rgba(0,0,0,.08);
+
+        /* Quadrant colours per Covey TMM model */
+        --color-q1: #FECACA; /* Q1 Firefighting — Urgent & Important       (red-200)   */
+        --color-q2: #BBF7D0; /* Q2 Growth       — Not Urgent but Important (green-200) */
+        --color-q3: #FEF08A; /* Q3 Distraction  — Urgent but Not Important (yellow-200)*/
+        --color-q4: #E2E8F0; /* Q4 Waste        — Not Urgent & Not Important(slate-200) */
+      }
+
+      /* ── Reset & base ──────────────────────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                     Helvetica, Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.6;
+        background: var(--color-bg);
+        color: var(--color-label);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── Toolbar ───────────────────────────────────────────────────────── */
+      #toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .toolbar-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 24px;
+        gap: 16px;
+      }
+
+      .toolbar-brand h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--color-label);
+        letter-spacing: -0.02em;
+      }
+
+      .toolbar-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .toolbar-bottom-row {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 6px 24px 8px;
+        border-top: 1px solid var(--color-border);
+        gap: 16px;
+      }
+
+      .toolbar-link {
+        font-size: 11px;
+        color: var(--color-primary);
+        text-decoration: none;
+        transition: color 0.15s;
+      }
+
+      .toolbar-link:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+      }
+
+      .toolbar-link--home {
+        margin-right: auto;
+      }
+
+      #toolbar button {
+        padding: 7px 13px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        color: var(--color-label);
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+      }
+
+      #toolbar button:hover {
+        background: #f0f0f0;
+        border-color: #bbb;
+      }
+
+      #toolbar button.btn-primary {
+        background: var(--color-primary);
+        color: #fff;
+        border-color: var(--color-primary);
+      }
+
+      #toolbar button.btn-primary:hover {
+        background: var(--color-primary-hover);
+        border-color: var(--color-primary-hover);
+      }
+
+      #toolbar button.btn-danger {
+        background: var(--color-danger);
+        color: #fff;
+        border-color: var(--color-danger);
+      }
+
+      #toolbar button.btn-danger:hover {
+        background: var(--color-danger-hover);
+        border-color: var(--color-danger-hover);
+      }
+
+      /* ── Main layout ───────────────────────────────────────────────────── */
+      #main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 24px 48px;
+        gap: 16px;
+        flex: 1;
+      }
+
+      /* ── Initiative input ──────────────────────────────────────────────── */
+      #initiative-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 780px;
+      }
+
+      #initiative-row label {
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        color: var(--color-muted);
+      }
+
+      #initiative-name {
+        flex: 1;
+        padding: 7px 10px;
+        font-size: 14px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        color: var(--color-label);
+      }
+
+      #initiative-name:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+
+      #add-dot-btn {
+        padding: 7px 14px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid var(--color-primary);
+        border-radius: var(--radius);
+        background: var(--color-primary);
+        color: #fff;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+      }
+
+      #add-dot-btn:hover {
+        background: var(--color-primary-hover);
+      }
+
+      /* ── Canvas wrapper (axes + grid) ──────────────────────────────────── */
+      #canvas-wrapper {
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        grid-template-rows: 1fr 32px;
+        width: 100%;
+        max-width: 780px;
+        gap: 0;
+      }
+
+      /* Y-axis label column */
+      #y-axis {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-evenly;
+        padding: 0;
+        gap: 0;
+      }
+
+      .y-axis-label {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        transform: rotate(180deg);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+        user-select: none;
+      }
+
+      /* X-axis label row */
+      #x-axis {
+        grid-column: 2;
+        grid-row: 2;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        padding-top: 4px;
+      }
+
+      .x-axis-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+        text-align: center;
+        user-select: none;
+      }
+
+      /* The quadrant grid canvas */
+      #tmm-canvas {
+        grid-column: 2;
+        grid-row: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        border: 2px solid var(--color-border);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+        aspect-ratio: 4 / 3;
+        cursor: crosshair;
+        background: var(--color-surface);
+      }
+
+      /* ── Quadrants ─────────────────────────────────────────────────────── */
+      .quadrant {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        padding: 12px 14px;
+        user-select: none;
+        overflow: hidden;
+      }
+
+      /* Grid placement: row / col — matches Covey TMM layout */
+      .quadrant[data-q="1"] { grid-row: 1; grid-column: 1; background: var(--color-q1); } /* top-left     */
+      .quadrant[data-q="2"] { grid-row: 1; grid-column: 2; background: var(--color-q2); } /* top-right    */
+      .quadrant[data-q="3"] { grid-row: 2; grid-column: 1; background: var(--color-q3); } /* bottom-left  */
+      .quadrant[data-q="4"] { grid-row: 2; grid-column: 2; background: var(--color-q4); } /* bottom-right */
+
+      /* Divider lines between quadrants */
+      .quadrant[data-q="1"],
+      .quadrant[data-q="2"] {
+        border-bottom: 2px solid rgba(0,0,0,0.12);
+      }
+
+      .quadrant[data-q="1"],
+      .quadrant[data-q="3"] {
+        border-right: 2px solid rgba(0,0,0,0.12);
+      }
+
+      .quadrant-heading {
+        font-size: 13px;
+        font-weight: 700;
+        color: rgba(0,0,0,0.6);
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        pointer-events: none;
+      }
+
+      .quadrant-subtitle {
+        font-size: 10px;
+        font-weight: 500;
+        color: rgba(0,0,0,0.45);
+        margin-top: 2px;
+        line-height: 1.3;
+        pointer-events: none;
+      }
+
+      /* ── Dots ──────────────────────────────────────────────────────────── */
+      .initiative-dot {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        border: 2px solid rgba(255,255,255,0.9);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        transition: box-shadow 0.1s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        font-weight: 700;
+        color: #fff;
+        z-index: 10;
+      }
+
+      .initiative-dot:hover {
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+      }
+
+      .dot-tooltip {
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 4px;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 20;
+      }
+
+      .initiative-dot:hover .dot-tooltip {
+        opacity: 1;
+      }
+
+      /* ── Initiatives list ──────────────────────────────────────────────── */
+      #list-section {
+        width: 100%;
+        max-width: 780px;
+      }
+
+      #list-section h2 {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--color-muted);
+        margin-bottom: 10px;
+      }
+
+      #initiatives-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        list-style: none;
+      }
+
+      .list-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .list-item-badge {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        flex-shrink: 0;
+      }
+
+      .list-item-name {
+        flex: 1;
+        color: var(--color-label);
+        font-weight: 500;
+      }
+
+      .list-item-coords {
+        font-size: 11px;
+        color: var(--color-muted);
+      }
+
+      .list-item-q {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        background: rgba(0,0,0,0.08);
+        color: rgba(0,0,0,0.55);
+      }
+
+      .list-item-remove {
+        background: none;
+        border: none;
+        color: var(--color-danger);
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0 2px;
+        border-radius: 3px;
+        transition: background 0.1s;
+      }
+
+      .list-item-remove:hover {
+        background: #fee2e2;
+      }
+
+      #empty-state {
+        font-size: 13px;
+        color: var(--color-muted);
+        text-align: center;
+        padding: 16px 0;
+      }
+
+      /* ── Status bar ────────────────────────────────────────────────────── */
+      #status-bar {
+        font-size: 12px;
+        color: var(--color-muted);
+        padding: 8px 24px;
+        border-top: 1px solid var(--color-border);
+        background: var(--color-surface);
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+
+      /* ── Print styles ──────────────────────────────────────────────────── */
+      @media print {
+        #toolbar,
+        #initiative-row,
+        #list-section,
+        #status-bar { display: none; }
+        #main { padding: 0; }
+        #canvas-wrapper { max-width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Toolbar ──────────────────────────────────────────────────────── -->
+    <div id="toolbar" role="banner">
+      <div class="toolbar-top-row">
+        <div class="toolbar-brand">
+          <h1>TMM — Time Management Matrix</h1>
+        </div>
+        <div class="toolbar-actions">
+          <button id="btn-load" aria-label="Load project file">Load</button>
+          <button id="btn-save" class="btn-primary" aria-label="Save project file">Save</button>
+          <button id="btn-clear" class="btn-danger" aria-label="Clear all initiatives">Clear All</button>
+        </div>
+      </div>
+      <div class="toolbar-bottom-row">
+        <a href="../../" class="toolbar-link toolbar-link--home" aria-label="Back to Toolkit home">← Toolkit Home</a>
+      </div>
+    </div>
+
+    <!-- ── Main ─────────────────────────────────────────────────────────── -->
+    <main id="main">
+
+      <!-- Initiative name input + add button -->
+      <div id="initiative-row">
+        <label for="initiative-name">Initiative:</label>
+        <input
+          type="text"
+          id="initiative-name"
+          placeholder="Enter initiative name, then click on the canvas to place it"
+          maxlength="120"
+          autocomplete="off"
+        />
+        <button id="add-dot-btn" aria-label="Place initiative on canvas">
+          Place on canvas
+        </button>
+      </div>
+
+      <!-- Canvas: Y-axis + grid + X-axis -->
+      <div id="canvas-wrapper" aria-label="Time Management Matrix canvas">
+
+        <!-- Y-axis labels -->
+        <div id="y-axis" aria-hidden="true">
+          <span class="y-axis-label" data-testid="y-axis-more-impact">More Impact</span>
+          <span class="y-axis-label" data-testid="y-axis-less-impact">Less Impact</span>
+        </div>
+
+        <!-- Quadrant grid -->
+        <div id="tmm-canvas" role="img" aria-label="Four-quadrant Time Management Matrix">
+
+          <!-- Q1 — top-left: Urgent & Important -->
+          <div class="quadrant" data-q="1" aria-label="Q1 Firefighting — Urgent and Important">
+            <span class="quadrant-heading" data-testid="q1-heading">Q1 Firefighting</span>
+            <span class="quadrant-subtitle" data-testid="q1-subtitle">Urgent &amp; Important</span>
+          </div>
+
+          <!-- Q2 — top-right: Not Urgent but Important -->
+          <div class="quadrant" data-q="2" aria-label="Q2 Growth — Not Urgent but Important">
+            <span class="quadrant-heading" data-testid="q2-heading">Q2 Growth</span>
+            <span class="quadrant-subtitle" data-testid="q2-subtitle">Not Urgent but Important</span>
+          </div>
+
+          <!-- Q3 — bottom-left: Urgent but Not Important -->
+          <div class="quadrant" data-q="3" aria-label="Q3 Distraction — Urgent but Not Important">
+            <span class="quadrant-heading" data-testid="q3-heading">Q3 Distraction</span>
+            <span class="quadrant-subtitle" data-testid="q3-subtitle">Urgent but Not Important</span>
+          </div>
+
+          <!-- Q4 — bottom-right: Not Urgent & Not Important -->
+          <div class="quadrant" data-q="4" aria-label="Q4 Waste — Not Urgent and Not Important">
+            <span class="quadrant-heading" data-testid="q4-heading">Q4 Waste</span>
+            <span class="quadrant-subtitle" data-testid="q4-subtitle">Not Urgent &amp; Not Important</span>
+          </div>
+
+        </div>
+
+        <!-- X-axis labels -->
+        <div id="x-axis" aria-hidden="true">
+          <span class="x-axis-label" data-testid="x-axis-more-urgent">More Urgent</span>
+          <span class="x-axis-label" data-testid="x-axis-less-urgent">Less Urgent</span>
+        </div>
+
+      </div>
+
+      <!-- Initiatives list -->
+      <section id="list-section" aria-label="Placed initiatives">
+        <h2>Placed Initiatives</h2>
+        <ul id="initiatives-list" aria-live="polite"></ul>
+        <p id="empty-state">No initiatives placed yet. Enter a name above and click on the canvas.</p>
+      </section>
+
+    </main>
+
+    <!-- ── Status bar ────────────────────────────────────────────────────── -->
+    <div id="status-bar" aria-live="polite" role="status">
+      <span id="status-msg">Ready</span>
+    </div>
+
+    <!-- Hidden file input for Load -->
+    <input type="file" id="file-input" accept=".json" style="display:none" aria-hidden="true" />
+
+    <script>
+      'use strict';
+
+      /* ════════════════════════════════════════════════════════════════════
+       * Coordinate system
+       * ─────────────────────────────────────────────────────────────────
+       * Canvas uses a normalised [0, 1] coordinate space:
+       *   x = 0.0  →  left edge  = high urgency   (Q1/Q3 side)
+       *   x = 1.0  →  right edge = low urgency    (Q2/Q4 side)
+       *   y = 0.0  →  top edge   = high impact    (Q1/Q2 side)
+       *   y = 1.0  →  bottom edge = low impact    (Q3/Q4 side)
+       *
+       * Quadrant assignment:
+       *   Q1 Firefighting  — x < 0.5, y < 0.5  (top-left)
+       *   Q2 Growth        — x ≥ 0.5, y < 0.5  (top-right)
+       *   Q3 Distraction   — x < 0.5, y ≥ 0.5  (bottom-left)
+       *   Q4 Waste         — x ≥ 0.5, y ≥ 0.5  (bottom-right)
+       * ════════════════════════════════════════════════════════════════════ */
+
+      /* ── State ───────────────────────────────────────────────────────── */
+      let initiatives = [];   // [{ id, name, x, y }]
+      let placingMode = false; // true after user clicks "Place on canvas"
+
+      /* ── DOM refs ────────────────────────────────────────────────────── */
+      const canvas        = document.getElementById('tmm-canvas');
+      const nameInput     = document.getElementById('initiative-name');
+      const addBtn        = document.getElementById('add-dot-btn');
+      const listEl        = document.getElementById('initiatives-list');
+      const emptyState    = document.getElementById('empty-state');
+      const statusMsg     = document.getElementById('status-msg');
+      const btnLoad       = document.getElementById('btn-load');
+      const btnSave       = document.getElementById('btn-save');
+      const btnClear      = document.getElementById('btn-clear');
+      const fileInput     = document.getElementById('file-input');
+
+      /* ── Utilities ───────────────────────────────────────────────────── */
+      function uid() {
+        return crypto.randomUUID
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      }
+
+      function quadrantFor(x, y) {
+        if (x < 0.5 && y < 0.5) return 1;
+        if (x >= 0.5 && y < 0.5) return 2;
+        if (x < 0.5 && y >= 0.5) return 3;
+        return 4;
+      }
+
+      const QUADRANT_NAMES = {
+        1: 'Q1 Firefighting',
+        2: 'Q2 Growth',
+        3: 'Q3 Distraction',
+        4: 'Q4 Waste',
+      };
+
+      function setStatus(msg) {
+        statusMsg.textContent = msg;
+      }
+
+      /* ── Rendering ───────────────────────────────────────────────────── */
+      function renderDots() {
+        // Remove existing dots
+        canvas.querySelectorAll('.initiative-dot').forEach(d => d.remove());
+
+        initiatives.forEach((init, idx) => {
+          const dot = document.createElement('div');
+          dot.className = 'initiative-dot';
+          dot.title = init.name;
+          dot.setAttribute('data-id', init.id);
+          dot.setAttribute('data-testid', `dot-${idx}`);
+          dot.setAttribute('tabindex', '0');
+          dot.setAttribute('aria-label', `${init.name} — ${QUADRANT_NAMES[quadrantFor(init.x, init.y)]}`);
+
+          // Position: x maps left→right, y maps top→bottom
+          dot.style.left = `${init.x * 100}%`;
+          dot.style.top  = `${init.y * 100}%`;
+
+          // Label (sequential number)
+          dot.textContent = String(idx + 1);
+
+          // Tooltip
+          const tip = document.createElement('span');
+          tip.className = 'dot-tooltip';
+          tip.textContent = init.name;
+          dot.appendChild(tip);
+
+          // Click to remove
+          dot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeInitiative(init.id);
+          });
+          dot.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+              e.preventDefault();
+              removeInitiative(init.id);
+            }
+          });
+
+          canvas.appendChild(dot);
+        });
+      }
+
+      function renderList() {
+        listEl.innerHTML = '';
+        emptyState.style.display = initiatives.length === 0 ? '' : 'none';
+
+        initiatives.forEach((init, idx) => {
+          const q = quadrantFor(init.x, init.y);
+          const li = document.createElement('li');
+          li.className = 'list-item';
+          li.innerHTML = `
+            <span class="list-item-badge" style="background: var(--color-primary);" aria-hidden="true"></span>
+            <span class="list-item-name">${idx + 1}. ${escapeHtml(init.name)}</span>
+            <span class="list-item-q">${QUADRANT_NAMES[q]}</span>
+            <span class="list-item-coords">(x:${init.x.toFixed(2)}, y:${init.y.toFixed(2)})</span>
+            <button class="list-item-remove" data-id="${init.id}" aria-label="Remove ${escapeHtml(init.name)}">×</button>
+          `;
+          li.querySelector('.list-item-remove').addEventListener('click', () => removeInitiative(init.id));
+          listEl.appendChild(li);
+        });
+      }
+
+      function escapeHtml(str) {
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function render() {
+        renderDots();
+        renderList();
+      }
+
+      /* ── Canvas click → place dot ────────────────────────────────────── */
+      function enterPlacingMode() {
+        const name = nameInput.value.trim();
+        if (!name) {
+          nameInput.focus();
+          setStatus('Enter an initiative name first.');
+          return;
+        }
+        placingMode = true;
+        canvas.style.cursor = 'crosshair';
+        setStatus(`Click on the canvas to place "${name}"`);
+      }
+
+      canvas.addEventListener('click', (e) => {
+        const name = nameInput.value.trim();
+        if (!name) {
+          nameInput.focus();
+          setStatus('Enter an initiative name first, then click the canvas.');
+          return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        const x = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+        const y = Math.min(1, Math.max(0, (e.clientY - rect.top)  / rect.height));
+
+        placeInitiative(name, x, y);
+        nameInput.value = '';
+        nameInput.focus();
+        placingMode = false;
+        canvas.style.cursor = 'crosshair';
+      });
+
+      addBtn.addEventListener('click', enterPlacingMode);
+
+      nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') enterPlacingMode();
+      });
+
+      function placeInitiative(name, x, y) {
+        const init = { id: uid(), name, x, y };
+        initiatives.push(init);
+        render();
+        setStatus(`Placed "${name}" in ${QUADRANT_NAMES[quadrantFor(x, y)]}`);
+      }
+
+      function removeInitiative(id) {
+        const init = initiatives.find(i => i.id === id);
+        initiatives = initiatives.filter(i => i.id !== id);
+        render();
+        if (init) setStatus(`Removed "${init.name}"`);
+      }
+
+      /* ── Save ────────────────────────────────────────────────────────── */
+      btnSave.addEventListener('click', () => {
+        const data = buildProjectFile();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `tmm-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        setStatus('Project file saved.');
+      });
+
+      function buildProjectFile() {
+        return {
+          effectivenessToolkit: {
+            version: '1.0',
+            lastModified: new Date().toISOString(),
+            initiatives: initiatives.map(init => ({
+              id: init.id,
+              name: init.name,
+              tmm: {
+                lastModified: new Date().toISOString(),
+                x: init.x,
+                y: init.y,
+              },
+              coer: null,
+              sob: null,
+              memoryMap: null,
+              impactMap: null,
+            })),
+          },
+        };
+      }
+
+      /* ── Load ────────────────────────────────────────────────────────── */
+      btnLoad.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            loadProjectFile(data);
+          } catch (err) {
+            setStatus('Error: could not parse the project file.');
+          }
+        };
+        reader.readAsText(file);
+        fileInput.value = '';
+      });
+
+      function loadProjectFile(data) {
+        const root = data?.effectivenessToolkit;
+        if (!root) {
+          setStatus('Error: not a valid Effectiveness Toolkit project file.');
+          return;
+        }
+        const loaded = [];
+        for (const init of (root.initiatives || [])) {
+          if (init.tmm && typeof init.tmm.x === 'number' && typeof init.tmm.y === 'number') {
+            loaded.push({ id: init.id || uid(), name: init.name || '(unnamed)', x: init.tmm.x, y: init.tmm.y });
+          }
+        }
+        initiatives = loaded;
+        render();
+        setStatus(`Loaded ${loaded.length} initiative(s) from file.`);
+      }
+
+      /* ── Clear ───────────────────────────────────────────────────────── */
+      btnClear.addEventListener('click', () => {
+        if (initiatives.length === 0) return;
+        if (!confirm('Remove all placed initiatives?')) return;
+        initiatives = [];
+        render();
+        setStatus('All initiatives cleared.');
+      });
+
+      /* ── Initial render ──────────────────────────────────────────────── */
+      render();
+    </script>
+  </body>
+</html>
