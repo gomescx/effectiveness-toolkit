@@ -34,7 +34,7 @@ The `tmm` section within each initiative stores the TMM-specific data: category,
 |-------|------|----------|---------|-------------|
 | `category` | string | No | `""` | User-defined category (free text, no predefined list) — FR-US3.01 |
 | `details` | string | No | `""` | Free-text details/description — FR-US1.02 |
-| `x` | number (0.0–1.0) | Yes | `0.5` | Normalised Urgency coordinate (0 = low/left, 1 = high/right) — FR-US2.03 |
+| `x` | number (0.0–1.0) | Yes | `0.5` | Normalised Urgency coordinate (0 = high/left, 1 = low/right) — FR-US2.03 |
 | `y` | number (0.0–1.0) | Yes | `0.5` | Normalised Impact coordinate (0 = low/bottom, 1 = high/top) — FR-US2.03 |
 
 **Validation rules**:

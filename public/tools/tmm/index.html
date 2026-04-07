@@ -8,10 +8,10 @@
       /* ── Custom properties ───────────────────────────────────────────────── */
       :root {
         /* Quadrant colours */
-        --color-q1:           #fef9c3; /* Q1 Do      — High Impact, High Urgency  */
-        --color-q2:           #dcfce7; /* Q2 Plan     — High Impact, Low Urgency   */
-        --color-q3:           #ffe4e6; /* Q3 Delegate — Low Impact,  High Urgency  */
-        --color-q4:           #f1f5f9; /* Q4 Eliminate— Low Impact,  Low Urgency   */
+        --color-q1:           #FECACA; /* Q1 Firefighting — High Impact, High Urgency (top-left)    */
+        --color-q2:           #BBF7D0; /* Q2 Growth       — High Impact, Low Urgency  (top-right)   */
+        --color-q3:           #FEF08A; /* Q3 Distraction  — Low Impact,  High Urgency (bottom-left) */
+        --color-q4:           #E2E8F0; /* Q4 Waste        — Low Impact,  Low Urgency  (bottom-right) */
 
         /* Surface / neutral palette */
         --color-bg:           #f8f9fa;
@@ -119,9 +119,16 @@
         min-height: 0;
       }
 
-      /* Rotated Y-axis label (Impact) */
-      .axis-y-label {
+      /* Rotated Y-axis labels container (Impact) */
+      .axis-y-labels {
         flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        width: 18px;
+        user-select: none;
+      }
+
+      .axis-y-label {
         writing-mode: vertical-rl;
         transform: rotate(180deg);
         font-size: var(--font-size-xs);
@@ -132,8 +139,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 18px;
-        user-select: none;
+        flex: 1;
       }
 
       /* Column that holds canvas + x-axis label */
@@ -146,16 +152,20 @@
         min-width: 0;
       }
 
-      /* X-axis label (Urgency) */
-      .axis-x-label {
+      /* X-axis labels container (Urgency) */
+      .axis-x-labels {
         flex-shrink: 0;
-        text-align: center;
+        display: flex;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      .axis-x-label {
         font-size: var(--font-size-xs);
         font-weight: 700;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         color: var(--color-muted);
-        user-select: none;
       }
 
       /* ── Four-quadrant canvas ────────────────────────────────────────────── */
@@ -177,10 +187,10 @@
       }
 
       /* Quadrant grid placement */
-      .quadrant-q2 { background: var(--color-q2); grid-row: 1; grid-column: 1; } /* top-left  */
-      .quadrant-q1 { background: var(--color-q1); grid-row: 1; grid-column: 2; } /* top-right */
-      .quadrant-q4 { background: var(--color-q4); grid-row: 2; grid-column: 1; } /* bot-left  */
-      .quadrant-q3 { background: var(--color-q3); grid-row: 2; grid-column: 2; } /* bot-right */
+      .quadrant-q1 { background: var(--color-q1); grid-row: 1; grid-column: 1; } /* top-left  — Firefighting */
+      .quadrant-q2 { background: var(--color-q2); grid-row: 1; grid-column: 2; } /* top-right — Growth */
+      .quadrant-q3 { background: var(--color-q3); grid-row: 2; grid-column: 1; } /* bot-left  — Distraction */
+      .quadrant-q4 { background: var(--color-q4); grid-row: 2; grid-column: 2; } /* bot-right — Waste */
 
       .quadrant-heading {
         font-size: var(--font-size-xs);
@@ -452,8 +462,11 @@
 
     <!-- ── Canvas wrapper ────────────────────────────────────────────────────── -->
     <div id="canvas-wrapper">
-      <!-- Y-axis label (Impact) -->
-      <div class="axis-y-label" aria-hidden="true">↑ Impact ↑</div>
+      <!-- Y-axis labels (Impact) — upper half: More Impact, lower half: Less Impact -->
+      <div class="axis-y-labels" aria-hidden="true">
+        <span class="axis-y-label">More Impact</span>
+        <span class="axis-y-label">Less Impact</span>
+      </div>
 
       <div class="canvas-area">
         <!-- Four-quadrant canvas; dots appended here by renderCanvas() -->
@@ -462,43 +475,46 @@
           role="region"
           aria-label="Time Management Matrix canvas"
         >
-          <!-- Q2: top-left — High Impact, Low Urgency -->
-          <div
-            class="quadrant quadrant-q2"
-            aria-label="Q2: Plan — High Impact, Low Urgency"
-          >
-            <span class="quadrant-heading">Q2 Plan</span>
-          </div>
-
-          <!-- Q1: top-right — High Impact, High Urgency -->
+          <!-- Q1: top-left — High Impact, High Urgency (Firefighting) -->
           <div
             class="quadrant quadrant-q1"
-            aria-label="Q1: Do — High Impact, High Urgency"
+            aria-label="Q1: Firefighting — High Impact, High Urgency"
           >
-            <span class="quadrant-heading">Q1 Do</span>
+            <span class="quadrant-heading">Q1 Firefighting</span>
           </div>
 
-          <!-- Q4: bottom-left — Low Impact, Low Urgency -->
+          <!-- Q2: top-right — High Impact, Low Urgency (Growth) -->
           <div
-            class="quadrant quadrant-q4"
-            aria-label="Q4: Eliminate — Low Impact, Low Urgency"
+            class="quadrant quadrant-q2"
+            aria-label="Q2: Growth — High Impact, Low Urgency"
           >
-            <span class="quadrant-heading">Q4 Eliminate</span>
+            <span class="quadrant-heading">Q2 Growth</span>
           </div>
 
-          <!-- Q3: bottom-right — Low Impact, High Urgency -->
+          <!-- Q3: bottom-left — Low Impact, High Urgency (Distraction) -->
           <div
             class="quadrant quadrant-q3"
-            aria-label="Q3: Delegate — Low Impact, High Urgency"
+            aria-label="Q3: Distraction — Low Impact, High Urgency"
           >
-            <span class="quadrant-heading">Q3 Delegate</span>
+            <span class="quadrant-heading">Q3 Distraction</span>
+          </div>
+
+          <!-- Q4: bottom-right — Low Impact, Low Urgency (Waste) -->
+          <div
+            class="quadrant quadrant-q4"
+            aria-label="Q4: Waste — Low Impact, Low Urgency"
+          >
+            <span class="quadrant-heading">Q4 Waste</span>
           </div>
 
           <!-- Initiative dots are inserted here by renderCanvas() -->
         </div>
 
-        <!-- X-axis label (Urgency) -->
-        <div class="axis-x-label" aria-hidden="true">Urgency →</div>
+        <!-- X-axis labels (Urgency) — left: More Urgent, right: Less Urgent -->
+        <div class="axis-x-labels" aria-hidden="true">
+          <span class="axis-x-label">More Urgent</span>
+          <span class="axis-x-label">Less Urgent</span>
+        </div>
       </div>
     </div>
 

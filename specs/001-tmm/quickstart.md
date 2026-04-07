@@ -51,15 +51,17 @@ public/tools/tmm/
 
 ```text
 Impact (y=1.0)
-  ┌──────────┬──────────┐
-  │ Q2 Plan  │ Q1 Do    │   top = (1 - y) * 100%
-  ├──────────┼──────────┤   left = x * 100%
-  │ Q4 Elim. │ Q3 Deleg.│
-  └──────────┴──────────┘
-(x=0.0)           (x=1.0) Urgency
+  ┌──────────────┬──────────────┐
+  │ Q1 Fire-     │ Q2 Growth    │   top = (1 - y) * 100%
+  │ fighting     │              │   left = x * 100%
+  ├──────────────┼──────────────┤
+  │ Q3 Distract. │ Q4 Waste     │
+  └──────────────┴──────────────┘
+(x=0.0)                (x=1.0)
+More Urgent            Less Urgent
 ```
 
-- `x` = normalised Urgency (0.0 = low/left, 1.0 = high/right)
+- `x` = normalised Urgency (0.0 = high/left, 1.0 = low/right)
 - `y` = normalised Impact (0.0 = low/bottom, 1.0 = high/top)
 - CSS mapping: `left = x * 100%`, `top = (1 - y) * 100%`
 
