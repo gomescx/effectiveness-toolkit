@@ -212,7 +212,9 @@
         background: var(--color-primary);
         border: 2px solid #fff;
         box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
-        cursor: pointer;
+        cursor: grab;
+        touch-action: none;        /* T016: prevents scroll hijack on touch */
+        will-change: transform;   /* T016: GPU compositing */
         /* Center the dot on its coordinate point */
         transform: translate(-50%, -50%);
         display: flex;
@@ -222,6 +224,7 @@
         z-index: 10;
       }
       .dot:hover  { box-shadow: 0 4px 16px rgba(0, 0, 0, .35); }
+      .dot.dragging { cursor: grabbing; z-index: 20; } /* T016 */
       .dot:focus-visible {
         outline: 3px solid var(--color-primary);
         outline-offset: 2px;
@@ -434,6 +437,23 @@
         transition: background 0.15s;
       }
       .btn-secondary:hover { background: #f0f0f0; }
+
+      /* ── Detail panel view / edit mode containers (T021) ────────────────── */
+      #panel-view-mode,
+      #panel-edit-mode {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        flex: 1;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: var(--space-sm);
+        justify-content: flex-end;
+        margin-top: auto;
+        padding-top: var(--space-xs);
+      }
     </style>
   </head>
   <body>
@@ -518,7 +538,7 @@
       </div>
     </div>
 
-    <!-- ── Detail panel (read-only view, Phases 1–4) ————————————————————————── -->
+    <!-- ── Detail panel ─────────────────────────────────────────────────────── -->
     <aside
       id="detail-panel"
       aria-label="Initiative details"
@@ -534,19 +554,50 @@
         >✕</button>
       </div>
 
-      <div class="panel-field">
-        <span class="panel-field-label">Name</span>
-        <span class="panel-field-value" id="panel-name"></span>
+      <!-- View mode (T010) -->
+      <div id="panel-view-mode">
+        <div class="panel-field">
+          <span class="panel-field-label">Name</span>
+          <span class="panel-field-value" id="panel-name"></span>
+        </div>
+
+        <div class="panel-field">
+          <span class="panel-field-label">Category</span>
+          <span class="panel-field-value" id="panel-category"></span>
+        </div>
+
+        <div class="panel-field">
+          <span class="panel-field-label">Details</span>
+          <span class="panel-field-value" id="panel-details"></span>
+        </div>
+
+        <div class="panel-actions">
+          <button type="button" id="btn-edit" class="btn-primary">Edit</button>
+        </div>
       </div>
 
-      <div class="panel-field">
-        <span class="panel-field-label">Category</span>
-        <span class="panel-field-value" id="panel-category"></span>
-      </div>
+      <!-- Edit mode (T021–T023) — hidden until "Edit" is clicked -->
+      <div id="panel-edit-mode" style="display:none">
+        <div class="form-field">
+          <label for="edit-name">Name <span aria-hidden="true">*</span></label>
+          <input type="text" id="edit-name" autocomplete="off" />
+          <span class="form-error" id="edit-error-name" role="alert">Name is required.</span>
+        </div>
 
-      <div class="panel-field">
-        <span class="panel-field-label">Details</span>
-        <span class="panel-field-value" id="panel-details"></span>
+        <div class="form-field">
+          <label for="edit-category">Category</label>
+          <input type="text" id="edit-category" autocomplete="off" />
+        </div>
+
+        <div class="form-field">
+          <label for="edit-details">Details</label>
+          <textarea id="edit-details" rows="4"></textarea>
+        </div>
+
+        <div class="panel-actions">
+          <button type="button" id="btn-edit-cancel" class="btn-secondary">Cancel</button>
+          <button type="button" id="btn-edit-confirm" class="btn-primary">Confirm</button>
+        </div>
       </div>
     </aside>
 
@@ -634,6 +685,9 @@
       /** Whether the detail panel is in edit mode (set by US5 — Phase 6). */
       var isEditing = false;
 
+      /** Snapshot of initiative values taken when edit mode opens (T023). */
+      var editSnapshot = null;
+
       /* ════════════════════════════════════════════════════════════════════
          UUID v4 (T004)
          Matches: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -694,20 +748,111 @@
           label.textContent = initiative.name;
           dot.appendChild(label);
 
-          /* Dot click → open detail panel (T010) */
-          dot.addEventListener('click', (function (id) {
-            return function () { openDetailPanel(id); };
-          }(initiative.id)));
+          /* ── Drag (T017–T019) + click/keyboard (T010) handlers ──── */
+          (function attachHandlers(dotEl, init) {
+            var isDragging = false;
+            var hasMoved   = false;
+            var offsetX    = 0, offsetY = 0;
+            var startX     = 0, startY  = 0;
 
-          /* Keyboard: Enter / Space also opens the panel */
-          dot.addEventListener('keydown', (function (id) {
-            return function (e) {
+            /* pointerdown: begin drag (T017) */
+            dotEl.addEventListener('pointerdown', function (e) {
+              /* Only primary button for mouse; all pointer types for touch/pen */
+              if (e.pointerType === 'mouse' && e.button !== 0) return;
+              e.preventDefault(); /* suppress text-selection during drag */
+
+              var cvs = document.getElementById('canvas');
+              var cr  = cvs.getBoundingClientRect();
+              var dr  = dotEl.getBoundingClientRect();
+
+              /* Centre of the dot relative to canvas top-left */
+              var cx = dr.left + dr.width  / 2 - cr.left;
+              var cy = dr.top  + dr.height / 2 - cr.top;
+
+              /* Offset from dot centre to pointer (≈0 when clicking centre) */
+              offsetX = (e.clientX - cr.left) - cx;
+              offsetY = (e.clientY - cr.top)  - cy;
+
+              startX = e.clientX;
+              startY = e.clientY;
+
+              isDragging = true;
+              hasMoved   = false;
+
+              dotEl.setPointerCapture(e.pointerId);
+              dotEl.classList.add('dragging');
+            });
+
+            /* pointermove: real-time repositioning (T018) */
+            dotEl.addEventListener('pointermove', function (e) {
+              if (!isDragging) return;
+
+              var dx = e.clientX - startX;
+              var dy = e.clientY - startY;
+              if (Math.sqrt(dx * dx + dy * dy) > 4) hasMoved = true;
+
+              var cvs = document.getElementById('canvas');
+              var cr  = cvs.getBoundingClientRect();
+
+              var newX = e.clientX - cr.left - offsetX;
+              var newY = e.clientY - cr.top  - offsetY;
+
+              /* Clamp dot centre to canvas boundary (T018) */
+              newX = Math.max(0, Math.min(cr.width,  newX));
+              newY = Math.max(0, Math.min(cr.height, newY));
+
+              dotEl.style.left = newX + 'px';
+              dotEl.style.top  = newY + 'px';
+            });
+
+            /* pointerup: commit position or treat as click (T019) */
+            dotEl.addEventListener('pointerup', function (e) {
+              if (!isDragging) return;
+
+              dotEl.releasePointerCapture(e.pointerId);
+              dotEl.classList.remove('dragging');
+              isDragging = false;
+
+              if (!hasMoved) {
+                /* No significant movement — treat as click, open detail panel */
+                openDetailPanel(init.id);
+                return;
+              }
+
+              var cvs = document.getElementById('canvas');
+              var cr  = cvs.getBoundingClientRect();
+
+              var newX = e.clientX - cr.left - offsetX;
+              var newY = e.clientY - cr.top  - offsetY;
+
+              newX = Math.max(0, Math.min(cr.width,  newX));
+              newY = Math.max(0, Math.min(cr.height, newY));
+
+              /* Normalise to [0.0, 1.0] (T019) */
+              var normX = Math.max(0, Math.min(1, newX / cr.width));
+              var normY = Math.max(0, Math.min(1, 1 - newY / cr.height));
+
+              /* Update the matching initiative in state */
+              for (var i = 0; i < initiatives.length; i++) {
+                if (initiatives[i].id === init.id) {
+                  initiatives[i].tmm.x = normX;
+                  initiatives[i].tmm.y = normY;
+                  break;
+                }
+              }
+
+              renderCanvas();
+            });
+
+            /* Keyboard: Enter / Space opens the panel */
+            dotEl.addEventListener('keydown', function (e) {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                openDetailPanel(id);
+                openDetailPanel(init.id);
               }
-            };
-          }(initiative.id)));
+            });
+
+          }(dot, initiative));
 
           canvas.appendChild(dot);
         });
@@ -727,10 +872,15 @@
 
         selectedInitiativeId = id;
         isEditing = false;
+        editSnapshot = null;
 
         document.getElementById('panel-name').textContent     = initiative.name;
         document.getElementById('panel-category').textContent = initiative.tmm.category;
         document.getElementById('panel-details').textContent  = initiative.tmm.details;
+
+        /* Ensure view mode is active, edit mode hidden */
+        document.getElementById('panel-view-mode').style.display = 'flex';
+        document.getElementById('panel-edit-mode').style.display = 'none';
 
         document.getElementById('detail-panel').classList.add('visible');
       }
@@ -743,14 +893,106 @@
       function closeDetailPanel() {
         selectedInitiativeId = null;
         isEditing = false;
+        editSnapshot = null;
         document.getElementById('detail-panel').classList.remove('visible');
+        /* Reset to view mode for next open */
+        document.getElementById('panel-view-mode').style.display = 'flex';
+        document.getElementById('panel-edit-mode').style.display = 'none';
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Edit initiative (T021, T022, T023)
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Switch the detail panel to edit mode (T021).
+       * Pre-populates fields with current initiative values and saves a
+       * snapshot so cancelEdit() can revert to them (T023).
+       */
+      function openEditMode() {
+        var initiative = null;
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === selectedInitiativeId) {
+            initiative = initiatives[i];
+            break;
+          }
+        }
+        if (!initiative) return;
+
+        /* Save snapshot for cancel revert (T023) */
+        editSnapshot = {
+          name:     initiative.name,
+          category: initiative.tmm.category,
+          details:  initiative.tmm.details
+        };
+
+        /* Populate edit fields */
+        document.getElementById('edit-name').value     = initiative.name;
+        document.getElementById('edit-category').value = initiative.tmm.category;
+        document.getElementById('edit-details').value  = initiative.tmm.details;
+
+        /* Clear any stale validation error */
+        document.getElementById('edit-name').classList.remove('input-error');
+        document.getElementById('edit-error-name').classList.remove('visible');
+
+        isEditing = true;
+        document.getElementById('panel-view-mode').style.display = 'none';
+        document.getElementById('panel-edit-mode').style.display = 'flex';
+        document.getElementById('edit-name').focus();
+      }
+
+      /**
+       * Confirm edits: validate Name, update initiatives[], refresh canvas,
+       * close panel (T022).
+       */
+      function confirmEdit() {
+        var name = document.getElementById('edit-name').value.trim();
+        if (!name) {
+          document.getElementById('edit-name').classList.add('input-error');
+          document.getElementById('edit-error-name').classList.add('visible');
+          document.getElementById('edit-name').focus();
+          return;
+        }
+
+        var category = document.getElementById('edit-category').value.trim();
+        var details  = document.getElementById('edit-details').value;
+
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === selectedInitiativeId) {
+            initiatives[i].name         = name;
+            initiatives[i].tmm.category = category;
+            initiatives[i].tmm.details  = details;
+            break;
+          }
+        }
+
+        isEditing    = false;
+        editSnapshot = null;
+        closeDetailPanel();
+        renderCanvas();
+      }
+
+      /**
+       * Cancel edits: revert view mode to the snapshot taken at edit-open,
+       * without writing any changes to initiatives[] (T023).
+       */
+      function cancelEdit() {
+        isEditing = false;
+        document.getElementById('panel-edit-mode').style.display = 'none';
+        document.getElementById('panel-view-mode').style.display = 'flex';
+
+        /* Restore snapshot values in the view-mode fields (T023) */
+        if (editSnapshot) {
+          document.getElementById('panel-name').textContent     = editSnapshot.name;
+          document.getElementById('panel-category').textContent = editSnapshot.category;
+          document.getElementById('panel-details').textContent  = editSnapshot.details;
+        }
+        editSnapshot = null;
       }
 
       /* ════════════════════════════════════════════════════════════════════
          Add Initiative modal (T007, T008)
          ════════════════════════════════════════════════════════════════════ */
-
-      /** Open the Add Initiative modal and reset its fields. */
       function openModal() {
         document.getElementById('field-name').value     = '';
         document.getElementById('field-category').value = '';
@@ -995,6 +1237,16 @@
       document.getElementById('btn-modal-submit').addEventListener('click', submitModal);
       document.getElementById('btn-panel-close').addEventListener('click', closeDetailPanel);
 
+      /* Edit mode buttons (T021–T023) */
+      document.getElementById('btn-edit').addEventListener('click', openEditMode);
+      document.getElementById('btn-edit-confirm').addEventListener('click', confirmEdit);
+      document.getElementById('btn-edit-cancel').addEventListener('click', cancelEdit);
+
+      /* Enter in the edit-name field confirms the edit */
+      document.getElementById('edit-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') confirmEdit();
+      });
+
       /* Backdrop click closes the modal (outside #modal-box). */
       document.getElementById('modal-overlay').addEventListener('click', function (e) {
         if (e.target === document.getElementById('modal-overlay')) closeModal();
@@ -1005,13 +1257,17 @@
         if (e.key === 'Enter') submitModal();
       });
 
-      /* Escape closes modal or panel. */
+      /* Escape closes modal, cancels edit, or closes panel. */
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
           if (document.getElementById('modal-overlay').classList.contains('visible')) {
             closeModal();
           } else if (document.getElementById('detail-panel').classList.contains('visible')) {
-            closeDetailPanel();
+            if (isEditing) {
+              cancelEdit();
+            } else {
+              closeDetailPanel();
+            }
           }
         }
       });

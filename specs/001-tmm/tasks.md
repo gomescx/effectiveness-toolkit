@@ -75,11 +75,11 @@
 
 **Independent Test**: Add an initiative, drag its dot from canvas centre to the top-right area, release — dot stays at new position. Save and reload — dot appears in the same top-right position with coordinates matching the drop location.
 
-- [ ] T016 [US2] Add drag-specific CSS to all dot elements: `touch-action: none` (prevents scroll hijack), `will-change: transform` (GPU compositing), `cursor: grab` (idle) / `cursor: grabbing` (active) in `public/tools/tmm/index.html`
-- [ ] T017 [US2] Implement `pointerdown` handler on each dot: record pointer offset from dot's top-left corner, call `dot.setPointerCapture(e.pointerId)`, add `dragging` CSS class — dragging begins on next `pointermove` in `public/tools/tmm/index.html`
-- [ ] T018 [US2] Implement `pointermove` handler: compute new `left`/`top` pixel values from pointer coordinates minus recorded offset, clamp to canvas bounds (`Math.max(0, Math.min(canvasWidth - dotWidth, newLeft))` / same for top), apply via `dot.style.left` / `dot.style.top` in real time in `public/tools/tmm/index.html`
-- [ ] T019 [US2] Implement `pointerup` handler: call `dot.releasePointerCapture(e.pointerId)`, remove `dragging` class, compute normalised coordinates (`x = pixelLeft / canvasWidth`, `y = 1 - pixelTop / canvasHeight`), clamp both to [0.0, 1.0], update the matching initiative in `initiatives[]`, call `renderCanvas()` in `public/tools/tmm/index.html`
-- [ ] T020 [US2] Verify boundary clamping: drag a dot to each canvas edge and beyond — dot stops at boundary, does not disappear, coordinates stay within [0.0, 1.0]; verify canvas remains responsive with 15 simultaneous initiative dots (SC-005) in `public/tools/tmm/index.html`
+- [X] T016 [US2] Add drag-specific CSS to all dot elements: `touch-action: none` (prevents scroll hijack), `will-change: transform` (GPU compositing), `cursor: grab` (idle) / `cursor: grabbing` (active) in `public/tools/tmm/index.html`
+- [X] T017 [US2] Implement `pointerdown` handler on each dot: record pointer offset from dot's top-left corner, call `dot.setPointerCapture(e.pointerId)`, add `dragging` CSS class — dragging begins on next `pointermove` in `public/tools/tmm/index.html`
+- [X] T018 [US2] Implement `pointermove` handler: compute new `left`/`top` pixel values from pointer coordinates minus recorded offset, clamp to canvas bounds (`Math.max(0, Math.min(canvasWidth - dotWidth, newLeft))` / same for top), apply via `dot.style.left` / `dot.style.top` in real time in `public/tools/tmm/index.html`
+- [X] T019 [US2] Implement `pointerup` handler: call `dot.releasePointerCapture(e.pointerId)`, remove `dragging` class, compute normalised coordinates (`x = pixelLeft / canvasWidth`, `y = 1 - pixelTop / canvasHeight`), clamp both to [0.0, 1.0], update the matching initiative in `initiatives[]`, call `renderCanvas()` in `public/tools/tmm/index.html`
+- [X] T020 [US2] Verify boundary clamping: drag a dot to each canvas edge and beyond — dot stops at boundary, does not disappear, coordinates stay within [0.0, 1.0]; verify canvas remains responsive with 15 simultaneous initiative dots (SC-005) in `public/tools/tmm/index.html`
 
 **Checkpoint**: User Stories 1 + 4 + 2 complete — drag-and-drop repositioning works and persists
 
@@ -91,9 +91,9 @@
 
 **Independent Test**: Add an initiative named "Health", open its detail panel, click Edit, change the name to "Fitness", confirm — the dot label updates to "Fitness" without page reload. Save and reload — "Fitness" is present with the correct position.
 
-- [ ] T021 [US5] Add "Edit" button to the detail panel view mode: clicking switches Name, Category, and Details to editable `<input>`/`<textarea>` fields pre-populated with the current initiative values; sets `isEditing = true` in `public/tools/tmm/index.html`
-- [ ] T022 [US5] Implement confirm-edit handler: validate Name field non-empty (reject submit + show inline validation message if empty — FR-US5.02), update the matching initiative in `initiatives[]` with new name/category/details, call `renderCanvas()` so the dot label reflects the new name immediately, close the panel in `public/tools/tmm/index.html`
-- [ ] T023 [US5] Implement cancel-edit handler: revert all form field values to their state at the moment Edit was activated using a snapshot taken on edit open, set `isEditing = false`, display view mode — no changes written to `initiatives[]` in `public/tools/tmm/index.html`
+- [X] T021 [US5] Add "Edit" button to the detail panel view mode: clicking switches Name, Category, and Details to editable `<input>`/`<textarea>` fields pre-populated with the current initiative values; sets `isEditing = true` in `public/tools/tmm/index.html`
+- [X] T022 [US5] Implement confirm-edit handler: validate Name field non-empty (reject submit + show inline validation message if empty — FR-US5.02), update the matching initiative in `initiatives[]` with new name/category/details, call `renderCanvas()` so the dot label reflects the new name immediately, close the panel in `public/tools/tmm/index.html`
+- [X] T023 [US5] Implement cancel-edit handler: revert all form field values to their state at the moment Edit was activated using a snapshot taken on edit open, set `isEditing = false`, display view mode — no changes written to `initiatives[]` in `public/tools/tmm/index.html`
 
 **Checkpoint**: User Stories 1 + 4 + 2 + 5 complete — full edit lifecycle with immediate canvas feedback
 
@@ -105,9 +105,9 @@
 
 **Independent Test**: Add two initiatives with categories "Health" and "Career". Click each dot — confirm each detail panel shows the correct category. Save and reload — both categories are restored exactly as entered.
 
-- [ ] T024 [US3] Verify Category input in "Add Initiative" form: accepts any free-text string with no format validation, no predefined list, and no uniqueness constraint (FR-US3.01); when left blank, stores empty string `""` so detail panel displays blank with no placeholder or default value substituted (FR-US3.04) in `public/tools/tmm/index.html`
-- [ ] T025 [P] [US3] Verify detail panel displays each initiative's category independently when clicked — click both "Health" and "Career" dots in turn and confirm no category cross-contamination (FR-US3.02, FR-US3.03); category field empty for name-only initiatives in `public/tools/tmm/index.html`
-- [ ] T026 [US3] Verify category survives save/load round-trip: `category` field present in the `tmm` section of the saved JSON with the exact string value entered; restored correctly after load without alteration (per US4 save contract — FR-US4.03) in `public/tools/tmm/index.html`
+- [x] T024 [US3] Verify Category input in "Add Initiative" form: accepts any free-text string with no format validation, no predefined list, and no uniqueness constraint (FR-US3.01); when left blank, stores empty string `""` so detail panel displays blank with no placeholder or default value substituted (FR-US3.04) in `public/tools/tmm/index.html`
+- [x] T025 [P] [US3] Verify detail panel displays each initiative's category independently when clicked — click both "Health" and "Career" dots in turn and confirm no category cross-contamination (FR-US3.02, FR-US3.03); category field empty for name-only initiatives in `public/tools/tmm/index.html`
+- [x] T026 [US3] Verify category survives save/load round-trip: `category` field present in the `tmm` section of the saved JSON with the exact string value entered; restored correctly after load without alteration (per US4 save contract — FR-US4.03) in `public/tools/tmm/index.html`
 
 **Checkpoint**: All five user stories independently functional
 
@@ -117,10 +117,10 @@
 
 **Purpose**: Edge case hardening affecting multiple user stories; final acceptance validation.
 
-- [ ] T027 [P] Add edge case handling: empty canvas (zero initiatives) renders correctly — four quadrant labels visible, axes clear, no JS errors, add button available (spec §Edge Cases — "Canvas with no initiatives") in `public/tools/tmm/index.html`
-- [ ] T028 [P] Add edge case handling: initiative name longer than 30 characters is visually truncated on the dot label with CSS `text-overflow: ellipsis`; full name displayed without truncation in the detail panel Name field (spec §Edge Cases — "Long initiative name") in `public/tools/tmm/index.html`
-- [ ] T029 [P] Add edge case handling: two initiatives placed at identical canvas coordinates are both rendered — neither hidden; apply a small CSS offset (`transform: translate(...)`) so both dots are distinguishable (spec §Edge Cases — "Multiple initiatives same position") in `public/tools/tmm/index.html`
-- [ ] T030 Run all quickstart.md manual validation scenarios against the completed `public/tools/tmm/index.html`; confirm SC-001 through SC-005 pass
+- [x] T027 [P] Add edge case handling: empty canvas (zero initiatives) renders correctly — four quadrant labels visible, axes clear, no JS errors, add button available (spec §Edge Cases — "Canvas with no initiatives") in `public/tools/tmm/index.html`
+- [x] T028 [P] Add edge case handling: initiative name longer than 30 characters is visually truncated on the dot label with CSS `text-overflow: ellipsis`; full name displayed without truncation in the detail panel Name field (spec §Edge Cases — "Long initiative name") in `public/tools/tmm/index.html`
+- [x] T029 [P] Add edge case handling: two initiatives placed at identical canvas coordinates are both rendered — neither hidden; apply a small CSS offset (`transform: translate(...)`) so both dots are distinguishable (spec §Edge Cases — "Multiple initiatives same position") in `public/tools/tmm/index.html`
+- [x] T030 Run all quickstart.md manual validation scenarios against the completed `public/tools/tmm/index.html`; confirm SC-001 through SC-005 pass
 
 ---
 
