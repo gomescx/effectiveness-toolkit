@@ -17,8 +17,8 @@
 
 **Purpose**: Understand the current implementation and introduce the new in-memory state variables before any structural changes.
 
-- [ ] T001 Read `public/tools/tmm/index.html` in full; identify the locations of: toolbar, canvas-wrapper, detail panel, modal, `submitModal()`, `renderCanvas()`, `saveToFile()`, `loadFromFile()`, and all existing `var` declarations in the `<script>` block
-- [ ] T002 Add new state variables to the top of the `<script>` block in `public/tools/tmm/index.html`: `var isDirty = false;`, `var isDirtyPanel = false;`, `var editSnapshot = null;`, `var inboxItems = [];`, `var activeTag = null;`, `var currentView = 'canvas';`
+- [X] T001 Read `public/tools/tmm/index.html` in full; identify the locations of: toolbar, canvas-wrapper, detail panel, modal, `submitModal()`, `renderCanvas()`, `saveToFile()`, `loadFromFile()`, and all existing `var` declarations in the `<script>` block
+- [X] T002 Add new state variables to the top of the `<script>` block in `public/tools/tmm/index.html`: `var isDirty = false;`, `var isDirtyPanel = false;`, `var editSnapshot = null;`, `var inboxItems = [];`, `var activeTag = null;`, `var currentView = 'canvas';`
 
 **Checkpoint**: State scaffold in place — implementation phases can begin
 
@@ -28,10 +28,10 @@
 
 **Purpose**: Shared utility functions and the `setDirty()` helper that all subsequent phases depend on. Must be complete before Phase A3, Phase B, and any save/load work.
 
-- [ ] T003 Add `deriveQuadrant(x, y)` helper function to `<script>` block in `public/tools/tmm/index.html`: returns `'Q1 — Firefighting'` / `'Q2 — Growth'` / `'Q3 — Distraction'` / `'Q4 — Waste'` per data-model.md quadrant table
-- [ ] T004 Add `validateTags(input)` helper function to `<script>` block in `public/tools/tmm/index.html`: trims input, splits on whitespace, filters empty tokens, tests each against `^#\S+$`; returns `{ tokens, invalid, valid }` per quickstart.md reference
-- [ ] T005 Add `applyDotSize(dotEl, size)` helper function to `<script>` block in `public/tools/tmm/index.html`: applies `width`/`height` from `SIZE_DIAMETER` map `{ XS:16, S:24, M:32, L:44, XL:58 }`; for `null` size sets transparent background + `var(--color-primary)` border; for sized sets `var(--color-primary)` background + white border; per quickstart.md reference
-- [ ] T006 Add `setDirty(val)` helper function to `<script>` block in `public/tools/tmm/index.html`: sets `isDirty = val`; shows `#unsaved-banner` when `val === true`; hides it when `val === false`
+- [X] T003 Add `deriveQuadrant(x, y)` helper function to `<script>` block in `public/tools/tmm/index.html`: returns `'Q1 — Firefighting'` / `'Q2 — Growth'` / `'Q3 — Distraction'` / `'Q4 — Waste'` per data-model.md quadrant table
+- [X] T004 Add `validateTags(input)` helper function to `<script>` block in `public/tools/tmm/index.html`: trims input, splits on whitespace, filters empty tokens, tests each against `^#\S+$`; returns `{ tokens, invalid, valid }` per quickstart.md reference
+- [X] T005 Add `applyDotSize(dotEl, size)` helper function to `<script>` block in `public/tools/tmm/index.html`: applies `width`/`height` from `SIZE_DIAMETER` map `{ XS:16, S:24, M:32, L:44, XL:58 }`; for `null` size sets transparent background + `var(--color-primary)` border; for sized sets `var(--color-primary)` background + white border; per quickstart.md reference
+- [X] T006 Add `setDirty(val)` helper function to `<script>` block in `public/tools/tmm/index.html`: sets `isDirty = val`; shows `#unsaved-banner` when `val === true`; hides it when `val === false`
 
 **Checkpoint**: All shared helpers available — all plan phases can now proceed
 
@@ -45,10 +45,10 @@
 
 **Independent Test**: Open `public/tools/tmm/index.html` in a browser. Confirm toolbar shows `[+ Quick Add]`, `[📊 Report]`, `[💾 Save]`, `[📂 Load]`, and a tag filter `<select>`. Confirm a red banner element exists between toolbar and canvas (hidden by default). Confirm `#canvas-wrapper` is a flex row with `#inbox-panel`, `#canvas-area`, and `#detail-panel` as direct children. No functionality needed — structural check only.
 
-- [ ] T007 [A1] In `public/tools/tmm/index.html`, replace the existing toolbar HTML with the new toolbar: keep `[💾 Save]` and `[📂 Load]` buttons; replace `[+ Add Initiative]` with `<button id="btn-quick-add">[+ Quick Add]</button>`; add `<button id="btn-report">[📊 Report]</button>`; add tag filter `<select id="tag-filter"><option value="">(all tags)</option></select>` and a hidden `<button id="btn-clear-filter" style="display:none">[× Clear]</button>`
-- [ ] T008 [A1] In `public/tools/tmm/index.html`, add `<div id="unsaved-banner" style="display:none; background:#e53e3e; color:#fff; padding:8px 16px;">Changes not saved — click 💾 Save to preserve your edits</div>` immediately after the toolbar and before `#canvas-wrapper`
-- [ ] T009 [A1] In `public/tools/tmm/index.html`, restructure `#canvas-wrapper` as a CSS flex row: add `<aside id="inbox-panel">` as the first child (collapsed by default showing `<button id="btn-inbox-expand">[▶ 0]</button>`); ensure the existing canvas `<div>` is wrapped in `<div id="canvas-area">` as the middle child; add `<div id="detail-panel" style="display:none">` as the right child (replaces any existing modal or fixed-position detail panel)
-- [ ] T010 [A1] In `public/tools/tmm/index.html`, add `<section id="report-view" style="display:none">` after `#canvas-wrapper`; inside it: a toolbar with `<button id="btn-export-md">[Export Markdown]</button>` and `<button id="btn-back-canvas">[← Back to Canvas]</button>`, the unsaved banner slot, and a `<table id="report-table">` with `<thead>` containing columns: `☐`, Q, Name, Tags, Size, Details
+- [X] T007 [A1] In `public/tools/tmm/index.html`, replace the existing toolbar HTML with the new toolbar: keep `[💾 Save]` and `[📂 Load]` buttons; replace `[+ Add Initiative]` with `<button id="btn-quick-add">[+ Quick Add]</button>`; add `<button id="btn-report">[📊 Report]</button>`; add tag filter `<select id="tag-filter"><option value="">(all tags)</option></select>` and a hidden `<button id="btn-clear-filter" style="display:none">[× Clear]</button>`
+- [X] T008 [A1] In `public/tools/tmm/index.html`, add `<div id="unsaved-banner" style="display:none; background:#e53e3e; color:#fff; padding:8px 16px;">Changes not saved — click 💾 Save to preserve your edits</div>` immediately after the toolbar and before `#canvas-wrapper`
+- [X] T009 [A1] In `public/tools/tmm/index.html`, restructure `#canvas-wrapper` as a CSS flex row: add `<aside id="inbox-panel">` as the first child (collapsed by default showing `<button id="btn-inbox-expand">[▶ 0]</button>`); ensure the existing canvas `<div>` is wrapped in `<div id="canvas-area">` as the middle child; add `<div id="detail-panel" style="display:none">` as the right child (replaces any existing modal or fixed-position detail panel)
+- [X] T010 [A1] In `public/tools/tmm/index.html`, add `<section id="report-view" style="display:none">` after `#canvas-wrapper`; inside it: a toolbar with `<button id="btn-export-md">[Export Markdown]</button>` and `<button id="btn-back-canvas">[← Back to Canvas]</button>`, the unsaved banner slot, and a `<table id="report-table">` with `<thead>` containing columns: `☐`, Q, Name, Tags, Size, Details
 
 **Checkpoint**: Structural scaffold complete — A2, A4, B4 can now build on the HTML structure
 
