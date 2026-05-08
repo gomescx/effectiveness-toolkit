@@ -56,19 +56,19 @@ A PEP coach or executive assigns a t-shirt size (XS, S, M, L, XL) to each initia
 
 ---
 
-### User Story 8 — Tabular Report with Bulk Tagging and Markdown Export (Priority: P3)
+### User Story 8 — Tabular Report with Inline Editing and Markdown Export (Priority: P3)
 
-A PEP coach or executive switches from the canvas to a Report view that lists all initiatives in a structured table with columns for quadrant, name, tags, size, and details. They select multiple initiatives by checkbox and apply a tag to all selected rows in one bulk action. They export the full table as a `.md` file that downloads to their device and renders correctly in any standard markdown viewer.
+A PEP coach or executive switches from the canvas to a Report view that lists all initiatives in a table with columns for quadrant, name, tags, size, and details. The table behaves as a spreadsheet editor: arrow keys and Tab navigate cells; Enter opens a cell for editing; Esc reverts. The Quadrant column is read-only. They may also select multiple initiatives by checkbox and apply a tag to all selected rows in one bulk action. They export the full table as a `.md` file that downloads to their device and renders correctly in any standard markdown viewer.
 
 **Why this priority**: The report view depends on tags (US-006) and size (US-007) being defined, as those are table columns. It is the endpoint for transitioning from visual brainstorming to a portable, shareable output. P3 as the last story to deliver.
 
-**Independent Test**: With five initiatives on the canvas, switch to Report — confirm all five appear with correct Quadrant, Name, Tags, Size, and Details. Select three rows, apply tag `#reviewed`, switch back to canvas — confirm the three dots show updated tag state immediately with no reload. Export as markdown — open the downloaded `.md` file, confirm the table has the correct columns and all five initiative rows.
+**Independent Test**: With five initiatives on the canvas, switch to Report — confirm all five appear with correct Quadrant, Name, Tags, Size, and Details. Navigate to the Name cell of one initiative using arrow keys; press Enter — confirm the cell enters edit mode with cursor active; type a new name; press Tab — confirm the change is committed and the Quadrant cell is skipped. Navigate to a Tags cell; press Enter; type an invalid tag (no `#` prefix); attempt to commit — confirm an inline error appears and the change is blocked. Select three rows via checkbox, apply tag `#reviewed`, switch back to canvas — confirm the three dots show updated tag state immediately with no reload. Export as markdown — open the downloaded `.md` file, confirm the table has the correct columns and all five initiative rows.
 
 **Acceptance Scenarios**:
 
 1. **Given** the TMM tool is open with at least one initiative, **When** the user activates the Report view, **Then** the view displays a table with columns: Quadrant, Name, Tags, Size, and Details, with one row per initiative.
 2. **Given** the report view is open, **When** the user reads any table row, **Then** the Quadrant value is derived from the initiative's canvas position (e.g., "Q1 — Firefighting"), the Tags column lists all tag tokens space-separated, and Size shows the assigned size or is blank if unset.
-3. **Given** the report view is open, **When** the user attempts to directly edit a row's Name, Size, Details, or Quadrant cell, **Then** those cells are read-only; no editing is possible from report rows.
+3. **Given** the report view is open, **When** the user navigates to a Name, Tags, Size, or Details cell and presses Enter, **Then** the cell enters edit mode with cursor active; pressing Esc reverts the cell to its previous value; pressing Tab or Enter commits the change and advances to the next editable cell; the Quadrant cell is not selectable and cannot be edited.
 4. **Given** the report view is open, **When** the user checks one or more row checkboxes, enters a valid tag token (e.g., `#reviewed`) in the bulk-tag input, and clicks "Apply to selected", **Then** the entered tag is appended to the tags array of all checked initiatives.
 5. **Given** a bulk tag that an initiative already carries is applied again to that initiative, **When** the apply action executes, **Then** the tag is not duplicated — the initiative's tags array remains deduplicated.
 6. **Given** a bulk tag operation has been applied in the report view, **When** the user returns to the canvas view, **Then** the updated tags are immediately visible in the tag filter list and on any affected dot — no page reload is required and no stale dot data is shown.
@@ -88,6 +88,8 @@ A PEP coach or executive switches from the canvas to a Report view that lists al
 - **Long tags list display**: An initiative with ten or more tags displays in the detail panel without breaking the layout or overflowing its container.
 - **Null size in canvas and export**: Initiatives with no size set render at the default dot diameter on the canvas and produce a blank Size cell in exported markdown — no placeholder leaks.
 - **State sync — single source of truth**: Returning to the canvas after any report action never reconstructs initiative state from DOM elements or table rows; the shared in-memory initiatives array is always the authoritative source.
+- **Report Tags cell — invalid commit**: Typing a tag without `#` prefix in a Report Tags cell and pressing Tab/Enter is blocked; an inline error is shown; the original value is preserved until a valid value is committed or Esc is pressed.
+- **Report cell — Esc during edit**: Pressing Esc while a Report cell is in edit mode discards all typed input and restores the cell to the value it held when Enter was pressed to open edit mode.
 
 ---
 
@@ -118,7 +120,12 @@ A PEP coach or executive switches from the canvas to a Report view that lists al
 - **FR-US8.01**: The tool MUST provide a Report view accessible via a toolbar action or navigation element from the canvas view, and a corresponding action to return to the canvas.
 - **FR-US8.02**: The report MUST list all current initiatives in a table with the following columns: Quadrant (derived from initiative `x`/`y` position), Name, Tags (all tokens), Size, and Details.
 - **FR-US8.03**: Quadrant derivation MUST be deterministic: `x < 0.5` = High Urgency; `x ≥ 0.5` = Low Urgency; `y ≥ 0.5` = High Impact; `y < 0.5` = Low Impact; combined labels MUST match the canvas quadrant labels (e.g., "Q1 — Firefighting").
-- **FR-US8.04**: The report table MUST be read-only for all columns except the bulk tag assignment control; Name, Size, Details, and Quadrant MUST NOT be editable from report rows.
+- **FR-US8.04**: The Report view MUST function as a spreadsheet editor; Name, Tags, Size, and Details cells MUST be editable inline; the Quadrant (Q) column MUST be read-only and non-selectable in the Report view — repositioning requires returning to the canvas.
+- **FR-US8.04a**: Arrow keys and Tab MUST navigate between editable cells in the Report view; the Q column MUST be skipped during navigation.
+- **FR-US8.04b**: Pressing Enter on a selected cell MUST toggle it into edit mode; pressing Esc during edit MUST revert the cell to its pre-edit value; pressing Tab or Enter while in edit mode MUST commit the change and advance focus to the next editable cell.
+- **FR-US8.04c**: Tags validation (space-separated `#token` format) MUST be enforced when a Tags cell is committed in the Report view; an invalid token MUST block the commit and display an inline error below the cell — e.g. "Use # prefix — e.g. #health".
+- **FR-US8.04d**: Editing an initiative's Name in the Report view MUST NOT change its unique ID; the ID remains the stable cross-tool identifier.
+- **FR-US8.04e**: Inline edits in the Report view MUST immediately update the shared in-memory initiatives array; changes MUST be reflected on the canvas without a page reload upon returning to canvas view.
 - **FR-US8.05**: The report MUST provide a checkbox per row for initiative selection.
 - **FR-US8.06**: The report MUST provide a tag input and an "Apply to selected" action; activating the action with at least one checkbox checked MUST append the entered tag token to the `tags` array of all checked initiatives, with no duplication if the tag is already present.
 - **FR-US8.07**: The bulk tag input MUST validate the entered value as a single `#token` format before applying; any entry that does not conform MUST be rejected with an inline message — no partial application.
@@ -139,7 +146,7 @@ A PEP coach or executive switches from the canvas to a Report view that lists al
 - **Tag Token**: A validated string matching `#` followed by one or more non-whitespace characters. Stored in the `tags` array. Displayed as space-separated tokens.
 - **T-Shirt Size**: A single enumerated value per initiative — one of XS, S, M, L, XL, or null (unset). Maps to a visually distinct dot diameter on the canvas.
 - **Filter State**: A single active tag token, session-only, not persisted. Governs which initiative dots are visible on the canvas.
-- **Report Row**: A derived read-only view over an initiative, displaying Quadrant (from `x`/`y`), Name, Tags, Size, and Details. Augmented with a checkbox for bulk tag selection.
+- **Report Row**: A tabular row bound to an initiative; Name, Tags, Size, and Details cells are editable inline via keyboard (Enter = edit, Esc = revert, Tab/Enter = commit); Quadrant (derived from `x`/`y`) is read-only and non-selectable. Augmented with a checkbox for bulk tag selection.
 
 ---
 
