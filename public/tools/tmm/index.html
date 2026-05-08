@@ -134,6 +134,9 @@
         width: auto;
         min-width: 0;
       }
+      #inbox-panel.collapsed .inbox-header,
+      #inbox-panel.collapsed #inbox-list,
+      #inbox-panel.collapsed #inbox-form { display: none !important; }
       #inbox-panel #btn-inbox-expand {
         display: none;
         padding: 6px 10px;
@@ -754,7 +757,38 @@
 
       <!-- First child: Inbox panel (collapsed by default, expanded on Quick Add) -->
       <aside id="inbox-panel" class="collapsed" aria-label="Initiative inbox">
+
+        <!-- Expand badge (shown when collapsed) -->
         <button id="btn-inbox-expand" type="button">[▶ 0]</button>
+
+        <!-- Header (hidden when collapsed) -->
+        <div class="inbox-header">
+          <span>INBOX (<span id="inbox-count">0</span>)</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <button id="btn-done-add" type="button" style="display:none">[Done]</button>
+            <button id="btn-inbox-collapse" type="button">[─]</button>
+          </div>
+        </div>
+
+        <!-- Initiative list -->
+        <ul id="inbox-list"></ul>
+
+        <!-- Bulk-add entry form (shown in add mode, hidden in list mode) -->
+        <div id="inbox-form" style="display:none">
+          <input id="inbox-name" type="text" placeholder="Initiative name" autocomplete="off" />
+          <input id="inbox-tags" type="text" placeholder="Tags (e.g. #health)" autocomplete="off" />
+          <span id="inbox-tags-error"></span>
+          <select id="inbox-size">
+            <option value="">Size (optional)</option>
+            <option value="XS">XS</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+          </select>
+          <span class="inbox-form-hint">Tab · Enter to add</span>
+        </div>
+
       </aside>
 
       <!-- Middle child: Canvas area (y-axis labels + canvas + x-axis labels) -->
@@ -1034,6 +1068,168 @@
       }
 
       /* ════════════════════════════════════════════════════════════════════
+         Inbox panel (T011–T015 / A2)
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Rebuild #inbox-list from inboxItems[], update count badge (T014).
+       * Wires [×] buttons to remove from both inboxItems[] and initiatives[].
+       */
+      function renderInbox() {
+        var list  = document.getElementById('inbox-list');
+        var count = inboxItems.length;
+
+        /* Rebuild list rows */
+        list.innerHTML = '';
+        inboxItems.forEach(function (item) {
+          var li = document.createElement('li');
+
+          var handle = document.createElement('span');
+          handle.className = 'drag-handle';
+          handle.textContent = '⠿';
+          handle.setAttribute('data-id', item.id);
+          handle.setAttribute('title', 'Drag to canvas');
+
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'inbox-item-name';
+          nameSpan.textContent = item.name;
+
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-inbox-remove';
+          removeBtn.type = 'button';
+          removeBtn.textContent = '×';
+          removeBtn.dataset.id = item.id;
+
+          li.appendChild(handle);
+          li.appendChild(nameSpan);
+          li.appendChild(removeBtn);
+          list.appendChild(li);
+        });
+
+        /* Update count displays */
+        var countEl = document.getElementById('inbox-count');
+        if (countEl) countEl.textContent = count;
+
+        /* Update the expand badge label */
+        var expandBtn = document.getElementById('btn-inbox-expand');
+        if (expandBtn) expandBtn.textContent = '[▶ ' + count + ']';
+      }
+
+      /**
+       * Submit one inbox entry from the Quick Add form (T013).
+       * Validates Name (required) and Tags (if provided).
+       * Creates initiative with x:null, y:null (unpositioned).
+       */
+      function submitInboxEntry() {
+        var nameEl  = document.getElementById('inbox-name');
+        var tagsEl  = document.getElementById('inbox-tags');
+        var sizeEl  = document.getElementById('inbox-size');
+        var errEl   = document.getElementById('inbox-tags-error');
+
+        var name = nameEl.value.trim();
+        if (!name) {
+          nameEl.focus();
+          return; /* silently skip empty name */
+        }
+
+        /* Validate tags only if something was entered */
+        var tagsRaw = tagsEl.value.trim();
+        var tags = [];
+        if (tagsRaw) {
+          var result = validateTags(tagsRaw);
+          if (!result.valid) {
+            errEl.textContent = 'Use # prefix — e.g. #health';
+            errEl.style.display = 'block';
+            tagsEl.focus();
+            return;
+          }
+          tags = result.tokens;
+        }
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+
+        var size = sizeEl.value || null;
+
+        var initiative = {
+          id:        generateUUID(),
+          name:      name,
+          coer:      null,
+          sob:       null,
+          memoryMap: null,
+          impactMap: null,
+          tmm: {
+            tags:    tags,
+            size:    size,
+            details: '',
+            x:       null,
+            y:       null
+          }
+        };
+
+        initiatives.push(initiative);
+        inboxItems.push(initiative);
+
+        renderInbox();
+
+        /* Clear form and refocus Name */
+        nameEl.value = '';
+        tagsEl.value = '';
+        sizeEl.value = '';
+        nameEl.focus();
+
+        setDirty(true);
+      }
+
+      /**
+       * Open the Inbox in bulk-add mode (T012).
+       * Shows the form, shows [Done], hides [─]. Removes collapsed state.
+       */
+      function openInbox() {
+        var panel = document.getElementById('inbox-panel');
+        panel.classList.remove('collapsed');
+
+        /* Show form / Done, hide collapse button */
+        document.getElementById('inbox-form').style.display = 'flex';
+        document.getElementById('inbox-form').style.flexDirection = 'column';
+        document.getElementById('btn-done-add').style.display = 'inline-block';
+        document.getElementById('btn-inbox-collapse').style.display = 'none';
+
+        renderInbox();
+        document.getElementById('inbox-name').focus();
+      }
+
+      /**
+       * Exit bulk-add mode — hide form, show collapse button (T015).
+       * Called by [Done] button.
+       */
+      function doneAddingInbox() {
+        document.getElementById('inbox-form').style.display = 'none';
+        document.getElementById('btn-done-add').style.display = 'none';
+        document.getElementById('btn-inbox-collapse').style.display = 'inline-block';
+      }
+
+      /**
+       * Collapse the inbox panel to badge-only view (T015).
+       * Called by [─] button.
+       */
+      function collapseInbox() {
+        document.getElementById('inbox-panel').classList.add('collapsed');
+      }
+
+      /**
+       * Expand the inbox panel from badge view (T015).
+       * Called by [▶ N] button.
+       */
+      function expandInbox() {
+        var panel = document.getElementById('inbox-panel');
+        panel.classList.remove('collapsed');
+        /* Ensure we are in list mode (not add mode) */
+        document.getElementById('inbox-form').style.display = 'none';
+        document.getElementById('btn-done-add').style.display = 'none';
+        document.getElementById('btn-inbox-collapse').style.display = 'inline-block';
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
          renderCanvas (T003 stub → T009 full implementation)
 
          Iterates initiatives[] and syncs DOM: removes stale dots, creates
@@ -1051,8 +1247,10 @@
           canvas.removeChild(oldDots[i]);
         }
 
-        /* Build one dot per initiative. */
+        /* Build one dot per initiative — skip unpositioned (T015). */
         initiatives.forEach(function (initiative) {
+          /* Skip initiatives that have not been placed on the canvas yet. */
+          if (initiative.tmm.x === null || initiative.tmm.y === null) return;
           var dot = document.createElement('div');
           dot.className = 'dot';
           dot.dataset.id = initiative.id;
@@ -1460,12 +1658,68 @@
         if (e.target === document.getElementById('modal-overlay')) closeModal();
       });
 
-      /* Enter in the Name field submits the form. */
+      /* Enter in the Name field submits the legacy modal form. */
       document.getElementById('field-name').addEventListener('keydown', function (e) {
         if (e.key === 'Enter') submitModal();
       });
 
-      /* Escape closes modal or (later) panel. */
+      /* ── Inbox panel listeners (T012–T015) ─────────────────────────────── */
+
+      /* [+ Quick Add] opens Inbox in add mode */
+      document.getElementById('btn-quick-add').addEventListener('click', openInbox);
+
+      /* [Done] exits add mode */
+      document.getElementById('btn-done-add').addEventListener('click', doneAddingInbox);
+
+      /* [─] collapses inbox */
+      document.getElementById('btn-inbox-collapse').addEventListener('click', collapseInbox);
+
+      /* [▶ N] expands inbox */
+      document.getElementById('btn-inbox-expand').addEventListener('click', expandInbox);
+
+      /* Inbox form keyboard navigation: Tab cycles Name→Tags→Size→Name; Enter submits */
+      document.getElementById('inbox-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitInboxEntry(); }
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-tags').focus();
+        }
+      });
+      document.getElementById('inbox-tags').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitInboxEntry(); }
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-size').focus();
+        }
+        if (e.key === 'Tab' && e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-name').focus();
+        }
+      });
+      document.getElementById('inbox-size').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitInboxEntry(); }
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-name').focus();
+        }
+        if (e.key === 'Tab' && e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-tags').focus();
+        }
+      });
+
+      /* Delegated [×] remove buttons on inbox list */
+      document.getElementById('inbox-list').addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-inbox-remove');
+        if (!btn) return;
+        var id = btn.dataset.id;
+        inboxItems  = inboxItems.filter(function (it) { return it.id !== id; });
+        initiatives = initiatives.filter(function (it) { return it.id !== id; });
+        renderInbox();
+        setDirty(true);
+      });
+
+      /* Escape closes modal. */
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
           if (document.getElementById('modal-overlay').classList.contains('visible')) {
@@ -1476,6 +1730,7 @@
 
       /* Initial render — empty canvas with four quadrant headings visible. */
       renderCanvas();
+      renderInbox();
     </script>
   </body>
 </html>
