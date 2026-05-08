@@ -343,6 +343,96 @@
         border-color: var(--color-border);
       }
 
+      /* Panel edit inputs (T019) */
+      .panel-input {
+        width: 100%;
+        padding: 5px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #fafafa;
+        color: var(--color-label);
+      }
+      .panel-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(79,70,229,.12);
+      }
+      .panel-textarea {
+        resize: vertical;
+        min-height: 72px;
+      }
+      .panel-field-error {
+        font-size: var(--font-size-xs);
+        color: var(--color-danger);
+      }
+      .panel-actions {
+        display: flex;
+        gap: var(--space-sm);
+        justify-content: flex-end;
+      }
+      .panel-delete-section {
+        margin-top: auto;
+        border-top: 1px solid var(--color-border);
+        padding-top: var(--space-sm);
+      }
+      .delete-confirm-box {
+        margin-top: var(--space-sm);
+        font-size: var(--font-size-sm);
+        color: var(--color-label);
+      }
+      .delete-confirm-actions {
+        display: flex;
+        gap: var(--space-sm);
+        margin-top: var(--space-sm);
+      }
+      .btn-primary {
+        padding: 6px 12px;
+        background: var(--color-primary);
+        color: #fff;
+        border: 1px solid var(--color-primary);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+      .btn-secondary {
+        padding: 6px 12px;
+        background: transparent;
+        color: var(--color-label);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+      .btn-secondary:hover { background: #f0f0f0; }
+      .btn-danger {
+        padding: 6px 12px;
+        background: var(--color-danger);
+        color: #fff;
+        border: 1px solid var(--color-danger);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+      .btn-danger:hover { background: #b91c1c; }
+      .btn-danger-outline {
+        padding: 5px 10px;
+        background: transparent;
+        color: var(--color-danger);
+        border: 1px solid var(--color-danger);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+      .btn-danger-outline:hover { background: #fff0f0; }
+
       .panel-field {
         display: flex;
         flex-direction: column;
@@ -849,9 +939,51 @@
         </div>
       </div>
 
-      <!-- Right child: Detail panel (empty scaffold — content added in T019/A4) -->
+      <!-- Right child: Detail panel (T019/A4 — always-edit mode) -->
       <div id="detail-panel" aria-label="Initiative details" style="display:none">
-        <!-- Content built in Phase 6 (T019) -->
+        <div class="panel-header">
+          <span class="panel-title">INITIATIVE</span>
+          <button id="btn-panel-close" class="panel-close" type="button">[Close]</button>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-name">Name</label>
+          <input id="edit-name" type="text" class="panel-input" placeholder="Initiative name" autocomplete="off" />
+          <span id="edit-name-error" class="panel-field-error" style="display:none">Name is required</span>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-tags">Tags</label>
+          <input id="edit-tags" type="text" class="panel-input" placeholder="e.g. #health #career" autocomplete="off" />
+          <span id="edit-tags-error" class="panel-field-error" style="display:none"></span>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-size">Size</label>
+          <select id="edit-size" class="panel-input">
+            <option value="">(no size)</option>
+            <option value="XS">XS</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+          </select>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-details">Details</label>
+          <textarea id="edit-details" class="panel-input panel-textarea" placeholder="Notes, context, links…" rows="4"></textarea>
+        </div>
+        <div class="panel-actions">
+          <button id="btn-panel-cancel" type="button" class="btn-secondary">[Cancel]</button>
+          <button id="btn-panel-confirm" type="button" class="btn-primary">[Confirm]</button>
+        </div>
+        <div class="panel-delete-section">
+          <button id="btn-panel-delete" type="button" class="btn-danger-outline">[Delete]</button>
+          <div id="delete-confirm" style="display:none" class="delete-confirm-box">
+            Delete this initiative? This cannot be undone.
+            <div class="delete-confirm-actions">
+              <button id="btn-delete-cancel" type="button" class="btn-secondary">[Cancel]</button>
+              <button id="btn-delete-yes" type="button" class="btn-danger">[Yes, delete]</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1440,8 +1572,14 @@
               isDragging = false;
 
               if (!hasMoved) {
-                /* No significant movement — treat as click, open detail panel */
-                openDetailPanel(init.id);
+                /* No significant movement — treat as click (T020).
+                   Toggle: click same dot with clean panel → close;
+                   click any other dot or panel is dirty → open. */
+                if (selectedInitiativeId === init.id && !isDirtyPanel) {
+                  closeDetailPanel();
+                } else {
+                  openDetailPanel(init.id);
+                }
                 return;
               }
 
@@ -1485,34 +1623,149 @@
       }
 
       /* ════════════════════════════════════════════════════════════════════
-         Detail panel (T010, T011) — rebuilt in Phase 6 (T019–T024)
+         Detail panel — Phase 6 (T019–T024 / A4)
+
+         Always-edit mode: panel opens with all fields editable.
+         [Close]   — gated by isDirtyPanel (pointer-events:none when dirty).
+         [Cancel]  — restores editSnapshot and closes.
+         [Confirm] — validates Name, stores all fields, re-renders canvas.
+         [Delete]  — shows inline confirmation; [Yes, delete] removes initiative.
          ════════════════════════════════════════════════════════════════════ */
 
-      /** Open the detail panel for the initiative with the given id. */
+      /**
+       * Enable or disable the [Close] button based on panel dirty state (T021).
+       * @param {boolean} dirty
+       */
+      function setPanelCloseable(dirty) {
+        var btn = document.getElementById('btn-panel-close');
+        if (dirty) {
+          btn.style.opacity       = '0.4';
+          btn.style.cursor        = 'not-allowed';
+          btn.style.pointerEvents = 'none';
+        } else {
+          btn.style.opacity       = '1';
+          btn.style.cursor        = 'pointer';
+          btn.style.pointerEvents = 'auto';
+        }
+      }
+
+      /**
+       * Open the detail panel for the given initiative id (T020).
+       * Always opens in edit mode. Populates fields from initiatives[].
+       */
       function openDetailPanel(id) {
-        /* Stub — full implementation in Phase 6 (T020) */
         var initiative = null;
         for (var i = 0; i < initiatives.length; i++) {
           if (initiatives[i].id === id) { initiative = initiatives[i]; break; }
         }
         if (!initiative) return;
+
         selectedInitiativeId = id;
+
+        /* Populate fields */
+        var tmm = initiative.tmm || {};
+        document.getElementById('edit-name').value    = initiative.name || '';
+        document.getElementById('edit-tags').value    = (tmm.tags && tmm.tags.length) ? tmm.tags.join(' ') : '';
+        document.getElementById('edit-size').value    = tmm.size || '';
+        document.getElementById('edit-details').value = tmm.details || '';
+
+        /* Hide inline errors */
+        document.getElementById('edit-name-error').style.display  = 'none';
+        document.getElementById('edit-tags-error').style.display  = 'none';
+
+        /* Take snapshot for Cancel (T022) */
+        editSnapshot = {
+          name:    initiative.name || '',
+          tags:    (tmm.tags && tmm.tags.length) ? tmm.tags.join(' ') : '',
+          size:    tmm.size || '',
+          details: tmm.details || ''
+        };
+
+        /* Reset dirty state and enable [Close] */
+        isDirtyPanel = false;
+        setPanelCloseable(false);
+
+        /* Hide delete confirmation if previously shown */
+        document.getElementById('delete-confirm').style.display = 'none';
+
+        /* Show panel in flex mode */
+        document.getElementById('detail-panel').style.display = 'flex';
+
+        /* Focus Name field */
+        document.getElementById('edit-name').focus();
       }
 
-      /** Close the detail panel. */
+      /**
+       * Close the detail panel and reset state (T022).
+       */
       function closeDetailPanel() {
-        /* Stub — full implementation in Phase 6 (T022) */
         selectedInitiativeId = null;
-        isDirtyPanel = false;
-        editSnapshot = null;
+        isDirtyPanel         = false;
+        editSnapshot         = null;
         document.getElementById('detail-panel').style.display = 'none';
       }
 
-      /** Confirm edits and update initiatives[]. Rebuilt in Phase 6 (T023). */
-      function confirmEdit() { /* stub */ }
+      /**
+       * Mark panel as dirty when any field changes (T021).
+       * Called by input/change listeners wired at page load.
+       */
+      function markPanelDirty() {
+        if (!isDirtyPanel) {
+          isDirtyPanel = true;
+          setPanelCloseable(true);
+        }
+      }
 
-      /** Cancel panel edits. Rebuilt in Phase 6 (T022). */
-      function cancelEdit() { /* stub */ }
+      /**
+       * Confirm edits: validate Name, store all fields, re-render (T023).
+       */
+      function confirmEdit() {
+        var name = document.getElementById('edit-name').value.trim();
+
+        /* Name required */
+        if (!name) {
+          document.getElementById('edit-name-error').style.display = '';
+          document.getElementById('edit-name').focus();
+          return;
+        }
+        document.getElementById('edit-name-error').style.display = 'none';
+
+        /* Tags — store raw split tokens (B1/Phase 7 wires full #-validation) */
+        var tagsRaw    = document.getElementById('edit-tags').value.trim();
+        var tagsTokens = tagsRaw ? tagsRaw.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
+
+        var size    = document.getElementById('edit-size').value || null;
+        var details = document.getElementById('edit-details').value;
+
+        /* Update initiative in state */
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === selectedInitiativeId) {
+            initiatives[i].name        = name;
+            initiatives[i].tmm.tags    = tagsTokens;
+            initiatives[i].tmm.size    = size;
+            initiatives[i].tmm.details = details;
+            break;
+          }
+        }
+
+        isDirtyPanel = false;
+        renderCanvas();
+        setDirty(true);
+        closeDetailPanel();
+      }
+
+      /**
+       * Cancel panel edits: restore fields from snapshot and close (T022).
+       */
+      function cancelEdit() {
+        if (editSnapshot) {
+          document.getElementById('edit-name').value    = editSnapshot.name;
+          document.getElementById('edit-tags').value    = editSnapshot.tags;
+          document.getElementById('edit-size').value    = editSnapshot.size;
+          document.getElementById('edit-details').value = editSnapshot.details;
+        }
+        closeDetailPanel();
+      }
 
       /* ════════════════════════════════════════════════════════════════════
          Add Initiative modal — kept for backward-compat; Quick Add (T012) is primary
@@ -1832,6 +2085,61 @@
             closeModal();
           }
         }
+      });
+
+      /* ── Detail panel listeners (T020–T024 / A4) ───────────────────────── */
+
+      /* [Close] — only closes when !isDirtyPanel (pointer-events:none when dirty) */
+      document.getElementById('btn-panel-close').addEventListener('click', function () {
+        if (!isDirtyPanel) closeDetailPanel();
+      });
+
+      /* [Cancel] — restore snapshot and close */
+      document.getElementById('btn-panel-cancel').addEventListener('click', cancelEdit);
+
+      /* [Confirm] — validate and save */
+      document.getElementById('btn-panel-confirm').addEventListener('click', confirmEdit);
+
+      /* Dirty-flag tracking: mark panel dirty on any field change (T021) */
+      document.getElementById('edit-name').addEventListener('input', markPanelDirty);
+      document.getElementById('edit-tags').addEventListener('input', markPanelDirty);
+      document.getElementById('edit-details').addEventListener('input', markPanelDirty);
+      document.getElementById('edit-size').addEventListener('change', markPanelDirty);
+
+      /* Panel tab order: Name → Tags → Size → Details → Confirm → Name (T022) */
+      document.getElementById('edit-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('edit-tags').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('btn-panel-confirm').focus(); }
+      });
+      document.getElementById('edit-tags').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('edit-size').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('edit-name').focus(); }
+      });
+      document.getElementById('edit-size').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('edit-details').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('edit-tags').focus(); }
+      });
+      document.getElementById('edit-details').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('btn-panel-confirm').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('edit-size').focus(); }
+      });
+
+      /* Delete flow (T024) */
+      document.getElementById('btn-panel-delete').addEventListener('click', function () {
+        document.getElementById('delete-confirm').style.display = 'block';
+      });
+      document.getElementById('btn-delete-cancel').addEventListener('click', function () {
+        document.getElementById('delete-confirm').style.display = 'none';
+      });
+      document.getElementById('btn-delete-yes').addEventListener('click', function () {
+        var id = selectedInitiativeId;
+        if (!id) return;
+        initiatives = initiatives.filter(function (it) { return it.id !== id; });
+        inboxItems  = inboxItems.filter(function (it) { return it.id !== id; });
+        renderCanvas();
+        renderInbox();
+        setDirty(true);
+        closeDetailPanel();
       });
 
       /* Initial render — empty canvas with four quadrant headings visible. */
