@@ -1230,6 +1230,110 @@
       }
 
       /* ════════════════════════════════════════════════════════════════════
+         Inbox drag-to-canvas (T016–T018 / A3)
+
+         Uses Pointer Events so it works on both mouse and touch.
+         State kept in closure vars so only one drag is ever active.
+         ════════════════════════════════════════════════════════════════════ */
+      (function initInboxDrag() {
+        var dragId   = null;   /* id of the initiative being dragged */
+        var ghost    = null;   /* ghost <div> that follows the pointer */
+        var captureEl = null;  /* element that captured the pointer */
+
+        /* T016 — pointerdown on drag handles inside #inbox-list */
+        document.getElementById('inbox-list').addEventListener('pointerdown', function (e) {
+          var handle = e.target.closest('.drag-handle');
+          if (!handle) return;
+
+          dragId = handle.dataset.id;
+          if (!dragId) return;
+
+          e.preventDefault(); /* suppress text selection */
+
+          /* Create ghost dot */
+          ghost = document.createElement('div');
+          ghost.id = 'drag-ghost';
+          ghost.style.cssText = [
+            'position:fixed',
+            'width:32px',
+            'height:32px',
+            'background:var(--color-primary)',
+            'border-radius:50%',
+            'opacity:0.5',
+            'pointer-events:none',
+            'z-index:9999',
+            'transform:translate(-50%,-50%)',
+            'border:2px solid #fff',
+            'box-shadow:0 2px 8px rgba(0,0,0,.25)'
+          ].join(';');
+          ghost.style.left = e.clientX + 'px';
+          ghost.style.top  = e.clientY + 'px';
+          document.body.appendChild(ghost);
+
+          /* Capture pointer to the handle element */
+          captureEl = handle;
+          handle.setPointerCapture(e.pointerId);
+        });
+
+        /* T017 — pointermove: move ghost to follow pointer */
+        document.getElementById('inbox-list').addEventListener('pointermove', function (e) {
+          if (!ghost) return;
+          ghost.style.left = e.clientX + 'px';
+          ghost.style.top  = e.clientY + 'px';
+        });
+
+        /* T018 — pointerup: drop on canvas or cancel */
+        document.getElementById('inbox-list').addEventListener('pointerup', function (e) {
+          if (!ghost) return;
+
+          /* Remove ghost from DOM */
+          document.body.removeChild(ghost);
+          ghost = null;
+          captureEl = null;
+
+          if (!dragId) return;
+
+          /* Check whether pointer landed inside #canvas-area */
+          var canvasArea = document.getElementById('canvas-area');
+          var rect = canvasArea.getBoundingClientRect();
+          var px = e.clientX;
+          var py = e.clientY;
+
+          if (px >= rect.left && px <= rect.right && py >= rect.top && py <= rect.bottom) {
+            /* Compute normalised coordinates relative to canvas area */
+            var normX = Math.max(0, Math.min(1, (px - rect.left) / rect.width));
+            var normY = Math.max(0, Math.min(1, 1 - (py - rect.top) / rect.height));
+
+            /* Find the initiative in initiatives[] and position it */
+            for (var i = 0; i < initiatives.length; i++) {
+              if (initiatives[i].id === dragId) {
+                initiatives[i].tmm.x = normX;
+                initiatives[i].tmm.y = normY;
+                break;
+              }
+            }
+
+            /* Remove from inboxItems (it is now positioned on canvas) */
+            inboxItems = inboxItems.filter(function (it) { return it.id !== dragId; });
+
+            renderInbox();
+            renderCanvas();
+            setDirty(true);
+          }
+          /* If dropped outside canvas: do nothing — inbox row remains */
+
+          dragId = null;
+        });
+
+        /* Cancel drag on pointercancel */
+        document.getElementById('inbox-list').addEventListener('pointercancel', function () {
+          if (ghost) { document.body.removeChild(ghost); ghost = null; }
+          dragId    = null;
+          captureEl = null;
+        });
+      }());
+
+      /* ════════════════════════════════════════════════════════════════════
          renderCanvas (T003 stub → T009 full implementation)
 
          Iterates initiatives[] and syncs DOM: removes stale dots, creates
@@ -1267,6 +1371,8 @@
           label.className = 'dot-label';
           label.textContent = initiative.name;
           dot.appendChild(label);
+
+          applyDotSize(dot, initiative.tmm.size || null);
 
           /* ── Drag (T017–T019) + click/keyboard (T010) handlers ──── */
           (function attachHandlers(dotEl, init) {
