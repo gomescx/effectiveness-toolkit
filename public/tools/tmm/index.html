@@ -191,6 +191,7 @@
         overflow: hidden;
         gap: var(--space-xs);
         min-width: 0;
+        position: relative;
       }
 
       /* X-axis labels container (Urgency) */
@@ -931,6 +932,9 @@
             <!-- Initiative dots are inserted here by renderCanvas() -->
           </div>
 
+          <!-- Filter empty-state message (T029 / B1) -->
+          <div id="filter-empty-msg" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:var(--font-size-sm); color:var(--color-muted); pointer-events:none; text-align:center; white-space:nowrap;">No initiatives match this filter</div>
+
           <!-- X-axis labels (Urgency) — left: More Urgent, right: Less Urgent -->
           <div class="axis-x-labels" aria-hidden="true">
             <span class="axis-x-label">More Urgent</span>
@@ -1483,10 +1487,49 @@
           canvas.removeChild(oldDots[i]);
         }
 
+        /* ── T027: Rebuild #tag-filter <option> list ───────────────────── */
+        var tagUnion = {};
+        for (var ti = 0; ti < initiatives.length; ti++) {
+          var tArr = initiatives[ti].tmm && initiatives[ti].tmm.tags;
+          if (Array.isArray(tArr)) {
+            for (var tj = 0; tj < tArr.length; tj++) {
+              tagUnion[tArr[tj]] = true;
+            }
+          }
+        }
+        var tagSelect = document.getElementById('tag-filter');
+        var prevValue = tagSelect.value; /* preserve selection */
+        while (tagSelect.options.length > 1) tagSelect.remove(1); /* keep (all tags) */
+        var sortedTags = Object.keys(tagUnion).sort();
+        for (var si = 0; si < sortedTags.length; si++) {
+          var opt = document.createElement('option');
+          opt.value = sortedTags[si];
+          opt.textContent = sortedTags[si];
+          tagSelect.appendChild(opt);
+        }
+        /* Restore activeTag selection if still present; otherwise reset */
+        if (activeTag && tagUnion[activeTag]) {
+          tagSelect.value = activeTag;
+        } else if (activeTag && !tagUnion[activeTag]) {
+          activeTag = null;
+        }
+
+        /* ── T028: Show/hide [× Clear] button ─────────────────────────── */
+        document.getElementById('btn-clear-filter').style.display = activeTag ? 'inline-block' : 'none';
+
         /* Build one dot per initiative — skip unpositioned (T015). */
+        var renderedCount = 0;
         initiatives.forEach(function (initiative) {
           /* Skip initiatives that have not been placed on the canvas yet. */
           if (initiative.tmm.x === null || initiative.tmm.y === null) return;
+
+          /* ── T028: Skip if active tag filter doesn't match ──────────── */
+          if (activeTag !== null) {
+            var itTags = (initiative.tmm && Array.isArray(initiative.tmm.tags)) ? initiative.tmm.tags : [];
+            if (itTags.indexOf(activeTag) === -1) return;
+          }
+
+          renderedCount++;
           var dot = document.createElement('div');
           dot.className = 'dot';
           dot.dataset.id = initiative.id;
@@ -1620,6 +1663,12 @@
 
           canvas.appendChild(dot);
         });
+
+        /* ── T029: Show empty-filter message when no dots rendered ─────── */
+        var emptyMsg = document.getElementById('filter-empty-msg');
+        if (emptyMsg) {
+          emptyMsg.style.display = (activeTag !== null && renderedCount === 0) ? 'block' : 'none';
+        }
       }
 
       /* ════════════════════════════════════════════════════════════════════
@@ -1730,9 +1779,22 @@
         }
         document.getElementById('edit-name-error').style.display = 'none';
 
-        /* Tags — store raw split tokens (B1/Phase 7 wires full #-validation) */
+        /* Tags — validate with validateTags() (T025 / B1) */
         var tagsRaw    = document.getElementById('edit-tags').value.trim();
-        var tagsTokens = tagsRaw ? tagsRaw.split(/\s+/).filter(function (t) { return t.length > 0; }) : [];
+        var tagsTokens = [];
+        if (tagsRaw) {
+          var tagsResult = validateTags(tagsRaw);
+          if (!tagsResult.valid) {
+            document.getElementById('edit-tags-error').textContent = 'Use # prefix — e.g. #health';
+            document.getElementById('edit-tags-error').style.display = '';
+            document.getElementById('edit-tags').focus();
+            return;
+          }
+          document.getElementById('edit-tags-error').style.display = 'none';
+          tagsTokens = tagsResult.tokens;
+        } else {
+          document.getElementById('edit-tags-error').style.display = 'none';
+        }
 
         var size    = document.getElementById('edit-size').value || null;
         var details = document.getElementById('edit-details').value;
@@ -1883,7 +1945,7 @@
            */
           var originalTmm = (original && original.tmm) ? original.tmm : {};
           saved.tmm = Object.assign({}, originalTmm, {
-            category: initiative.tmm.category,
+            tags:     Array.isArray(initiative.tmm.tags) ? initiative.tmm.tags : [],
             details:  initiative.tmm.details,
             x:        initiative.tmm.x,
             y:        initiative.tmm.y
@@ -1946,7 +2008,9 @@
 
             if (rawInitiatives.length === 0) {
               initiatives = [];
+              activeTag = null;
               renderCanvas();
+              setDirty(false);
               return;
             }
 
@@ -1971,7 +2035,7 @@
                   memoryMap: item.memoryMap !== undefined ? item.memoryMap : null,
                   impactMap: item.impactMap !== undefined ? item.impactMap : null,
                   tmm: {
-                    category: tmm.category !== undefined ? tmm.category : '',
+                    tags:    Array.isArray(tmm.tags) ? tmm.tags : [],
                     details:  tmm.details  !== undefined ? tmm.details   : '',
                     /* Clamp coordinates to [0.0, 1.0] (FR-US2.04 / data-model).
                        Default to canvas centre (0.5, 0.5) when no tmm section. */
@@ -1985,7 +2049,9 @@
                 };
               });
 
+            activeTag = null; /* FR-000.06: reset filter on every load (T031) */
             renderCanvas();
+            setDirty(false); /* T031 */
 
           } catch (err) {
             console.error('[TMM] Failed to parse project file:', err);
@@ -2085,6 +2151,20 @@
             closeModal();
           }
         }
+      });
+
+      /* ── Tag filter listeners (T028 / B1) ──────────────────────────────── */
+
+      document.getElementById('tag-filter').addEventListener('change', function () {
+        activeTag = this.value || null;
+        renderCanvas();
+      });
+
+      document.getElementById('btn-clear-filter').addEventListener('click', function () {
+        activeTag = null;
+        document.getElementById('tag-filter').value = '';
+        document.getElementById('btn-clear-filter').style.display = 'none';
+        renderCanvas();
       });
 
       /* ── Detail panel listeners (T020–T024 / A4) ───────────────────────── */
