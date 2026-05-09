@@ -1,0 +1,37 @@
+{
+  "effectivenessToolkit": {
+    "version": "1.0",
+    "lastModified": "2026-04-06T02:06:17.117Z",
+    "initiatives": [
+      {
+        "id": "0d9ad370-62a0-4b24-aa12-9c91993dbb49",
+        "name": "BSC - Supervision Reporting",
+        "coer": {
+          "lastModified": "2026-04-06T02:06:17.117Z",
+          "specificResults": [
+            "A Claude Cowork system that receives a transcription of a supervision meeting and produces a supervision report "
+          ],
+          "reason": "- It reduce my time spent on supervisions for Julia Roso\n- It will deepen my skills in Claude Cowork",
+          "corporateContribution": "1. Increase the quality of supervisions for BSC - better facilitators\n2. May support Community of Practice ",
+          "consequencesAchieving": [
+            "Less effort producing reports",
+            "Standardization of reports - better knowledge management"
+          ],
+          "consequencesNotAchieving": [
+            "Reports get delayed due to competing timed priorities"
+          ],
+          "startingPoint": "Claudio & Kate have discussed and agreed the first step is to define Core Competencies (CC)\nKate agreed to provide the reference material against which CC will be measured against\nClaudio will create and manage the Cowork project  ",
+          "stakeholders": [
+            "Claudio, Kate",
+            "Other Didacts interested in the project and CC definition"
+          ],
+          "confidencePercent": "80",
+          "obstacles": [
+            "Losing focus due to other priorities",
+            "No pressing Q1 supervisions apart from Julia Roso - leading to lower urgency and priority "
+          ]
+        }
+      }
+    ]
+  }
+}

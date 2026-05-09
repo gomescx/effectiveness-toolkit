@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TMM — Time Management Matrix</title>
+    <style>
+      /* ── Custom properties ───────────────────────────────────────────────── */
+      :root {
+        /* Quadrant colours */
+        --color-q1:           #FECACA; /* Q1 Firefighting — High Impact, High Urgency (top-left)    */
+        --color-q2:           #BBF7D0; /* Q2 Growth       — High Impact, Low Urgency  (top-right)   */
+        --color-q3:           #FEF08A; /* Q3 Distraction  — Low Impact,  High Urgency (bottom-left) */
+        --color-q4:           #E2E8F0; /* Q4 Waste        — Low Impact,  Low Urgency  (bottom-right) */
+
+        /* Surface / neutral palette */
+        --color-bg:           #f8f9fa;
+        --color-surface:      #ffffff;
+        --color-border:       #e2e8f0;
+        --color-label:        #1a1a2e;
+        --color-muted:        #6b7280;
+        --color-primary:      #4f46e5;
+        --color-primary-hover:#4338ca;
+        --color-danger:       #dc2626;
+
+        /* Spacing scale */
+        --space-xs:  4px;
+        --space-sm:  8px;
+        --space-md:  16px;
+        --space-lg:  24px;
+
+        /* Typography */
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                     Helvetica, Arial, sans-serif;
+        --font-size-base: 15px;
+        --font-size-sm:   13px;
+        --font-size-xs:   11px;
+
+        /* Shape */
+        --radius:    6px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, .08);
+      }
+
+      /* ── Reset & base ────────────────────────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: var(--font-sans);
+        font-size: var(--font-size-base);
+        line-height: 1.6;
+        background: var(--color-bg);
+        color: var(--color-label);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ── Toolbar ─────────────────────────────────────────────────────────── */
+      #toolbar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px var(--space-lg);
+        gap: var(--space-md);
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+        z-index: 100;
+      }
+
+      .toolbar-brand h1 {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--color-label);
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+      }
+
+      .toolbar-actions {
+        display: flex;
+        gap: var(--space-sm);
+        align-items: center;
+      }
+
+      .toolbar-link {
+        font-size: var(--font-size-xs);
+        color: var(--color-primary);
+        text-decoration: none;
+        white-space: nowrap;
+        margin-right: var(--space-xs);
+      }
+      .toolbar-link:hover { text-decoration: underline; }
+
+      #toolbar button {
+        padding: 7px 13px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        border-radius: var(--radius);
+        cursor: pointer;
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-label);
+        font-family: var(--font-sans);
+        transition: background 0.15s, border-color 0.15s;
+        white-space: nowrap;
+      }
+      #toolbar button:hover { background: #f0f0f0; border-color: #bbb; }
+      #toolbar button:active { background: #e8e8e8; }
+
+      /* ── Canvas wrapper ──────────────────────────────────────────────────── */
+      #canvas-wrapper {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        padding: var(--space-lg);
+        gap: var(--space-sm);
+        min-height: 0;
+      }
+
+      /* ── Inbox panel ─────────────────────────────────────────────────────── */
+      #inbox-panel {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        width: 220px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      #inbox-panel.collapsed {
+        width: auto;
+        min-width: 0;
+      }
+      #inbox-panel.collapsed .inbox-header,
+      #inbox-panel.collapsed #inbox-list,
+      #inbox-panel.collapsed #inbox-form { display: none !important; }
+      #inbox-panel #btn-inbox-expand {
+        display: none;
+        padding: 6px 10px;
+        font-size: var(--font-size-sm);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-family: var(--font-sans);
+        white-space: nowrap;
+        color: var(--color-label);
+      }
+      #inbox-panel.collapsed #btn-inbox-expand { display: block; }
+
+      /* ── Canvas area (middle child of canvas-wrapper) ────────────────────── */
+      #canvas-area {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        gap: var(--space-sm);
+        min-height: 0;
+        min-width: 0;
+      }
+
+      /* Rotated Y-axis labels container (Impact) */
+      .axis-y-labels {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        width: 18px;
+        user-select: none;
+      }
+
+      .axis-y-label {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+      }
+
+      /* Column that holds canvas + x-axis label */
+      .canvas-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        gap: var(--space-xs);
+        min-width: 0;
+        position: relative;
+      }
+
+      /* X-axis labels container (Urgency) */
+      .axis-x-labels {
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      .axis-x-label {
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--color-muted);
+      }
+
+      /* ── Four-quadrant canvas ────────────────────────────────────────────── */
+      #canvas {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        border: 2px solid var(--color-border);
+        border-radius: var(--radius);
+        position: relative;  /* positioning context for absolutely-placed dots */
+        overflow: hidden;
+        min-height: 0;
+      }
+
+      .quadrant {
+        padding: var(--space-sm);
+        border: 1px solid rgba(0, 0, 0, .06);
+      }
+
+      /* Quadrant grid placement */
+      .quadrant-q1 { background: var(--color-q1); grid-row: 1; grid-column: 1; } /* top-left  — Firefighting */
+      .quadrant-q2 { background: var(--color-q2); grid-row: 1; grid-column: 2; } /* top-right — Growth */
+      .quadrant-q3 { background: var(--color-q3); grid-row: 2; grid-column: 1; } /* bot-left  — Distraction */
+      .quadrant-q4 { background: var(--color-q4); grid-row: 2; grid-column: 2; } /* bot-right — Waste */
+
+      .quadrant-heading {
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+        opacity: 0.8;
+        user-select: none;
+        pointer-events: none;
+      }
+
+      /* ── Initiative dot ──────────────────────────────────────────────────── */
+      .dot {
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        border: 2px solid #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+        cursor: grab;
+        touch-action: none;        /* T016: prevents scroll hijack on touch */
+        will-change: transform;   /* T016: GPU compositing */
+        /* Center the dot on its coordinate point */
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: box-shadow 0.15s;
+        z-index: 10;
+      }
+      .dot:hover  { box-shadow: 0 4px 16px rgba(0, 0, 0, .35); }
+      .dot.dragging { cursor: grabbing; z-index: 20; } /* T016 */
+      .dot:focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+      }
+
+      /* Dot label (below the dot circle) */
+      .dot-label {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--color-label);
+        background: rgba(255, 255, 255, .92);
+        border: 1px solid var(--color-border);
+        border-radius: 3px;
+        padding: 1px 5px;
+        white-space: nowrap;
+        max-width: 140px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        pointer-events: none;
+        user-select: none;
+      }
+
+      /* ── Detail panel ────────────────────────────────────────────────────── */
+      #detail-panel {
+        display: none;
+        flex-direction: column;
+        gap: var(--space-md);
+        flex-shrink: 0;
+        width: 280px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        padding: var(--space-lg);
+        overflow-y: auto;
+      }
+      #detail-panel[style*="display: flex"],
+      #detail-panel.visible { display: flex; }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+
+      .panel-title {
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+      }
+
+      .panel-close {
+        padding: 4px 7px;
+        font-size: 15px;
+        line-height: 1;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        cursor: pointer;
+        color: var(--color-muted);
+        font-family: var(--font-sans);
+        transition: background 0.15s, color 0.15s;
+      }
+      .panel-close:hover {
+        background: #f0f0f0;
+        color: var(--color-label);
+        border-color: var(--color-border);
+      }
+
+      /* Panel edit inputs (T019) */
+      .panel-input {
+        width: 100%;
+        padding: 5px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #fafafa;
+        color: var(--color-label);
+      }
+      .panel-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(79,70,229,.12);
+      }
+      .panel-textarea {
+        resize: vertical;
+        min-height: 72px;
+      }
+      .panel-field-error {
+        font-size: var(--font-size-xs);
+        color: var(--color-danger);
+      }
+      .panel-actions {
+        display: flex;
+        gap: var(--space-sm);
+        justify-content: flex-end;
+      }
+      .panel-delete-section {
+        margin-top: auto;
+        border-top: 1px solid var(--color-border);
+        padding-top: var(--space-sm);
+      }
+      .delete-confirm-box {
+        margin-top: var(--space-sm);
+        font-size: var(--font-size-sm);
+        color: var(--color-label);
+      }
+      .delete-confirm-actions {
+        display: flex;
+        gap: var(--space-sm);
+        margin-top: var(--space-sm);
+      }
+      .btn-primary {
+        padding: 6px 12px;
+        background: var(--color-primary);
+        color: #fff;
+        border: 1px solid var(--color-primary);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-primary:hover { background: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+      .btn-secondary {
+        padding: 6px 12px;
+        background: transparent;
+        color: var(--color-label);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+      .btn-secondary:hover { background: #f0f0f0; }
+      .btn-danger {
+        padding: 6px 12px;
+        background: var(--color-danger);
+        color: #fff;
+        border: 1px solid var(--color-danger);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+      .btn-danger:hover { background: #b91c1c; }
+      .btn-danger-outline {
+        padding: 5px 10px;
+        background: transparent;
+        color: var(--color-danger);
+        border: 1px solid var(--color-danger);
+        border-radius: var(--radius);
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        cursor: pointer;
+      }
+      .btn-danger-outline:hover { background: #fff0f0; }
+
+      .panel-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .panel-field-label {
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+      }
+
+      .panel-field-value {
+        font-size: 14px;
+        color: var(--color-label);
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      /* ── Inbox panel styles ──────────────────────────────────────────────── */
+      .inbox-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-sm) var(--space-sm);
+        border-bottom: 1px solid var(--color-border);
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+        gap: var(--space-xs);
+      }
+      .inbox-header button {
+        padding: 2px 6px;
+        font-size: var(--font-size-xs);
+        background: transparent;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-family: var(--font-sans);
+        color: var(--color-muted);
+      }
+      .inbox-header button:hover { background: #f0f0f0; }
+
+      #inbox-list {
+        list-style: none;
+        overflow-y: auto;
+        flex: 1;
+        padding: var(--space-xs) 0;
+        margin: 0;
+      }
+      #inbox-list li {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--font-size-sm);
+        border-bottom: 1px solid var(--color-border);
+      }
+      #inbox-list li:last-child { border-bottom: none; }
+      .drag-handle {
+        cursor: grab;
+        color: var(--color-muted);
+        font-size: 16px;
+        line-height: 1;
+        touch-action: none;
+      }
+      .drag-handle:active { cursor: grabbing; }
+      .inbox-item-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .btn-inbox-remove {
+        padding: 1px 5px;
+        font-size: 11px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        cursor: pointer;
+        color: var(--color-danger);
+        font-family: var(--font-sans);
+        flex-shrink: 0;
+      }
+      .btn-inbox-remove:hover { background: #fff0f0; border-color: var(--color-danger); }
+
+      #inbox-form {
+        padding: var(--space-sm);
+        border-top: 1px solid var(--color-border);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+      #inbox-form input,
+      #inbox-form select {
+        width: 100%;
+        padding: 5px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #fafafa;
+      }
+      #inbox-form input:focus,
+      #inbox-form select:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(79,70,229,.12);
+      }
+      .inbox-form-hint {
+        font-size: var(--font-size-xs);
+        color: var(--color-muted);
+        text-align: right;
+      }
+      #inbox-tags-error {
+        font-size: var(--font-size-xs);
+        color: var(--color-danger);
+        display: none;
+      }
+
+      /* ── Report view ─────────────────────────────────────────────────────── */
+      #report-view {
+        display: none;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+        padding: var(--space-lg);
+        gap: var(--space-md);
+        min-height: 0;
+      }
+      #report-view.visible { display: flex; }
+
+      .report-toolbar {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        flex-shrink: 0;
+      }
+      .report-toolbar button {
+        padding: 7px 13px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        border-radius: var(--radius);
+        cursor: pointer;
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-label);
+        font-family: var(--font-sans);
+      }
+      .report-toolbar button:hover { background: #f0f0f0; }
+
+      .report-bulk-bar {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        flex-shrink: 0;
+        font-size: var(--font-size-sm);
+      }
+      .report-bulk-bar input {
+        padding: 5px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #fafafa;
+        width: 180px;
+      }
+      .report-bulk-bar button {
+        padding: 5px 10px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        border-radius: var(--radius);
+        cursor: pointer;
+        border: 1px solid var(--color-border);
+        background: transparent;
+        font-family: var(--font-sans);
+      }
+      .report-bulk-bar button:hover { background: #f0f0f0; }
+      #bulk-tag-msg {
+        font-size: var(--font-size-xs);
+        color: var(--color-danger);
+      }
+
+      .report-table-wrapper {
+        flex: 1;
+        overflow: auto;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        min-height: 0;
+      }
+      #report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--font-size-sm);
+      }
+      #report-table th {
+        background: #f8f9fa;
+        border-bottom: 2px solid var(--color-border);
+        padding: 8px 10px;
+        text-align: left;
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--color-muted);
+        position: sticky;
+        top: 0;
+        white-space: nowrap;
+      }
+      #report-table td {
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--color-border);
+        vertical-align: middle;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #report-table tr:last-child td { border-bottom: none; }
+      #report-table tr:hover td { background: #f8f9fa; }
+      .editable-cell { cursor: pointer; }
+      .editable-cell:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+      .editable-cell.editing { padding: 0; overflow: visible; }
+      .editable-cell input,
+      .editable-cell select,
+      .editable-cell textarea {
+        width: 100%;
+        padding: 6px 8px;
+        font-family: var(--font-sans);
+        font-size: var(--font-size-sm);
+        border: 1px solid var(--color-primary);
+        border-radius: 3px;
+        background: var(--color-surface);
+      }
+      .editable-cell textarea { resize: vertical; min-height: 60px; }
+      .cell-error {
+        font-size: var(--font-size-xs);
+        color: var(--color-danger);
+        display: block;
+        margin-top: 2px;
+      }
+
+      /* ── Add Initiative modal ────────────────────────────────────────────── */
+      #modal-overlay {
+        display: none; /* shown via .visible class */
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .45);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+      #modal-overlay.visible { display: flex; }
+
+      #modal-box {
+        background: var(--color-surface);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, .2);
+        padding: var(--space-lg);
+        width: 100%;
+        max-width: 440px;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+      }
+
+      .modal-heading {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--color-label);
+      }
+
+      .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+
+      .form-field label {
+        font-size: var(--font-size-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--color-muted);
+      }
+
+      .form-field input[type="text"],
+      .form-field textarea {
+        padding: 8px 12px;
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--color-label);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background: #fafafa;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        resize: vertical;
+      }
+      .form-field input[type="text"]:focus,
+      .form-field textarea:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, .15);
+        background: var(--color-surface);
+      }
+      .form-field input[type="text"].input-error {
+        border-color: var(--color-danger);
+        box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+      }
+
+      .form-error {
+        display: none;
+        font-size: var(--font-size-xs);
+        color: var(--color-danger);
+        font-weight: 500;
+      }
+      .form-error.visible { display: block; }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-sm);
+        padding-top: var(--space-xs);
+      }
+
+      .btn-primary {
+        padding: 8px 16px;
+        font-size: var(--font-size-sm);
+        font-weight: 600;
+        background: var(--color-primary);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-family: var(--font-sans);
+        transition: background 0.15s;
+      }
+      .btn-primary:hover { background: var(--color-primary-hover); }
+
+      .btn-secondary {
+        padding: 8px 16px;
+        font-size: var(--font-size-sm);
+        font-weight: 500;
+        background: transparent;
+        color: var(--color-muted);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-family: var(--font-sans);
+        transition: background 0.15s;
+      }
+      .btn-secondary:hover { background: #f0f0f0; }
+
+      /* ── Detail panel view / edit mode containers (T021) ────────────────── */
+      #panel-view-mode,
+      #panel-edit-mode {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+        flex: 1;
+      }
+
+      .panel-actions {
+        display: flex;
+        gap: var(--space-sm);
+        justify-content: flex-end;
+        margin-top: auto;
+        padding-top: var(--space-xs);
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
+    <header id="toolbar">
+      <div class="toolbar-brand">
+        <h1>TMM — Time Management Matrix</h1>
+      </div>
+      <div class="toolbar-actions">
+        <a href="../../index.html" class="toolbar-link">← Back to Toolkit</a>
+        <button id="btn-quick-add" type="button">[+ Quick Add]</button>
+        <button id="btn-report" type="button">[📊 Report]</button>
+        <button id="btn-save" type="button">💾 Save</button>
+        <button id="btn-load" type="button">📂 Load</button>
+        <select id="tag-filter" aria-label="Filter by tag">
+          <option value="">(all tags)</option>
+        </select>
+        <button id="btn-clear-filter" type="button" style="display:none">[× Clear]</button>
+        <!-- Hidden file input for load action -->
+        <input
+          type="file"
+          id="file-input"
+          accept=".json"
+          style="display:none"
+          aria-hidden="true"
+          tabindex="-1"
+        />
+      </div>
+    </header>
+
+    <!-- ── Unsaved changes banner (T008) ────────────────────────────────────── -->
+    <div id="unsaved-banner" style="display:none; background:#e53e3e; color:#fff; padding:8px 16px;">Changes not saved — click 💾 Save to preserve your edits</div>
+
+    <!-- ── Canvas wrapper ────────────────────────────────────────────────────── -->
+    <div id="canvas-wrapper">
+
+      <!-- First child: Inbox panel (collapsed by default, expanded on Quick Add) -->
+      <aside id="inbox-panel" class="collapsed" aria-label="Initiative inbox">
+
+        <!-- Expand badge (shown when collapsed) -->
+        <button id="btn-inbox-expand" type="button">[▶ 0]</button>
+
+        <!-- Header (hidden when collapsed) -->
+        <div class="inbox-header">
+          <span>INBOX (<span id="inbox-count">0</span>)</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <button id="btn-done-add" type="button" style="display:none">[Done]</button>
+            <button id="btn-inbox-collapse" type="button">[─]</button>
+          </div>
+        </div>
+
+        <!-- Initiative list -->
+        <ul id="inbox-list"></ul>
+
+        <!-- Bulk-add entry form (shown in add mode, hidden in list mode) -->
+        <div id="inbox-form" style="display:none">
+          <input id="inbox-name" type="text" placeholder="Initiative name" autocomplete="off" />
+          <input id="inbox-tags" type="text" placeholder="Tags (e.g. #health)" autocomplete="off" />
+          <span id="inbox-tags-error"></span>
+          <select id="inbox-size">
+            <option value="">Size (optional)</option>
+            <option value="XS">XS</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+          </select>
+          <span class="inbox-form-hint">Tab · Enter to add</span>
+        </div>
+
+      </aside>
+
+      <!-- Middle child: Canvas area (y-axis labels + canvas + x-axis labels) -->
+      <div id="canvas-area">
+        <!-- Y-axis labels (Impact) — upper half: More Impact, lower half: Less Impact -->
+        <div class="axis-y-labels" aria-hidden="true">
+          <span class="axis-y-label">More Impact</span>
+          <span class="axis-y-label">Less Impact</span>
+        </div>
+
+        <div class="canvas-area">
+          <!-- Four-quadrant canvas; dots appended here by renderCanvas() -->
+          <div
+            id="canvas"
+            role="region"
+            aria-label="Time Management Matrix canvas"
+          >
+            <!-- Q1: top-left — High Impact, High Urgency (Firefighting) -->
+            <div
+              class="quadrant quadrant-q1"
+              aria-label="Q1: Firefighting — High Impact, High Urgency"
+            >
+              <span class="quadrant-heading">Q1 Firefighting</span>
+            </div>
+
+            <!-- Q2: top-right — High Impact, Low Urgency (Growth) -->
+            <div
+              class="quadrant quadrant-q2"
+              aria-label="Q2: Growth — High Impact, Low Urgency"
+            >
+              <span class="quadrant-heading">Q2 Growth</span>
+            </div>
+
+            <!-- Q3: bottom-left — Low Impact, High Urgency (Distraction) -->
+            <div
+              class="quadrant quadrant-q3"
+              aria-label="Q3: Distraction — Low Impact, High Urgency"
+            >
+              <span class="quadrant-heading">Q3 Distraction</span>
+            </div>
+
+            <!-- Q4: bottom-right — Low Impact, Low Urgency (Waste) -->
+            <div
+              class="quadrant quadrant-q4"
+              aria-label="Q4: Waste — Low Impact, Low Urgency"
+            >
+              <span class="quadrant-heading">Q4 Waste</span>
+            </div>
+
+            <!-- Initiative dots are inserted here by renderCanvas() -->
+          </div>
+
+          <!-- Filter empty-state message (T029 / B1) -->
+          <div id="filter-empty-msg" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:var(--font-size-sm); color:var(--color-muted); pointer-events:none; text-align:center; white-space:nowrap;">No initiatives match this filter</div>
+
+          <!-- Empty canvas hint (T049 / FR-UX-001) — shown when no dots are on the canvas -->
+          <div id="canvas-empty-hint" style="display:block; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:var(--font-size-sm); color:var(--color-muted); pointer-events:none; text-align:center; white-space:nowrap;">Load a matrix or click [+ Quick Add] to get started</div>
+
+          <!-- X-axis labels (Urgency) — left: More Urgent, right: Less Urgent -->
+          <div class="axis-x-labels" aria-hidden="true">
+            <span class="axis-x-label">More Urgent</span>
+            <span class="axis-x-label">Less Urgent</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right child: Detail panel (T019/A4 — always-edit mode) -->
+      <div id="detail-panel" aria-label="Initiative details" style="display:none">
+        <div class="panel-header">
+          <span class="panel-title">INITIATIVE</span>
+          <button id="btn-panel-close" class="panel-close" type="button">[Close]</button>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-name">Name</label>
+          <input id="edit-name" type="text" class="panel-input" placeholder="Initiative name" autocomplete="off" />
+          <span id="edit-name-error" class="panel-field-error" style="display:none">Name is required</span>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-tags">Tags</label>
+          <input id="edit-tags" type="text" class="panel-input" placeholder="e.g. #health #career" autocomplete="off" />
+          <span id="edit-tags-error" class="panel-field-error" style="display:none"></span>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-size">Size</label>
+          <select id="edit-size" class="panel-input">
+            <option value="">(no size)</option>
+            <option value="XS">XS</option>
+            <option value="S">S</option>
+            <option value="M">M</option>
+            <option value="L">L</option>
+            <option value="XL">XL</option>
+          </select>
+        </div>
+        <div class="panel-field">
+          <label class="panel-field-label" for="edit-details">Details</label>
+          <textarea id="edit-details" class="panel-input panel-textarea" placeholder="Notes, context, links…" rows="4"></textarea>
+        </div>
+        <div class="panel-actions">
+          <button id="btn-panel-cancel" type="button" class="btn-secondary">[Cancel]</button>
+          <button id="btn-panel-confirm" type="button" class="btn-primary">[Confirm]</button>
+        </div>
+        <div class="panel-delete-section">
+          <button id="btn-panel-delete" type="button" class="btn-danger-outline">[Delete]</button>
+          <div id="delete-confirm" style="display:none" class="delete-confirm-box">
+            Delete this initiative? This cannot be undone.
+            <div class="delete-confirm-actions">
+              <button id="btn-delete-cancel" type="button" class="btn-secondary">[Cancel]</button>
+              <button id="btn-delete-yes" type="button" class="btn-danger">[Yes, delete]</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Report view (hidden by default — shown on [📊 Report] click) ─────── -->
+    <section id="report-view" aria-label="Report view" style="display:none">
+      <div class="report-toolbar">
+        <button id="btn-export-md" type="button">[Export Markdown]</button>
+        <button id="btn-back-canvas" type="button">[← Back to Canvas]</button>
+      </div>
+      <div class="report-bulk-bar">
+        <label for="bulk-tag-input">Bulk tag:</label>
+        <input type="text" id="bulk-tag-input" placeholder="#tag" autocomplete="off" />
+        <button id="btn-bulk-apply" type="button">Apply to selected</button>
+        <span id="bulk-tag-msg"></span>
+      </div>
+      <div class="report-table-wrapper">
+        <table id="report-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-checkbox" aria-label="Select all"></th>
+              <th>Q</th>
+              <th>Name</th>
+              <th>Tags</th>
+              <th>Size</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Add Initiative modal (T007) ──────────────────────────────────────── -->
+    <div
+      id="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-heading"
+    >
+      <div id="modal-box">
+        <h2 class="modal-heading" id="modal-heading">Add Initiative</h2>
+
+        <!-- Name (required) -->
+        <div class="form-field">
+          <label for="field-name">
+            Name <span aria-hidden="true">*</span>
+          </label>
+          <input
+            type="text"
+            id="field-name"
+            placeholder="Initiative name"
+            autocomplete="off"
+          />
+          <span class="form-error" id="error-name" role="alert">
+            Name is required.
+          </span>
+        </div>
+
+        <!-- Category (optional free text) -->
+        <div class="form-field">
+          <label for="field-category">Category</label>
+          <input
+            type="text"
+            id="field-category"
+            placeholder="e.g. Health, Career, Finance"
+            autocomplete="off"
+          />
+        </div>
+
+        <!-- Details (optional multi-line) -->
+        <div class="form-field">
+          <label for="field-details">Details</label>
+          <textarea
+            id="field-details"
+            rows="4"
+            placeholder="Optional notes or description"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-secondary"
+            id="btn-modal-cancel"
+          >Cancel</button>
+          <button
+            type="button"
+            class="btn-primary"
+            id="btn-modal-submit"
+          >Add Initiative</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      'use strict';
+
+      /* ════════════════════════════════════════════════════════════════════
+         State (T003)
+         ════════════════════════════════════════════════════════════════════ */
+      /** @type {Array<Object>} In-memory list of all initiatives */
+      var initiatives = [];
+
+      /**
+       * Full parsed project-file object from the last Load action.
+       * Used to preserve non-tmm sections on Save (Constitution Principle VI).
+       * @type {Object|null}
+       */
+      var loadedProjectFile = null;
+
+      /** ID of the currently selected initiative (detail panel open). */
+      var selectedInitiativeId = null;
+
+      /** Whether the detail panel is in edit mode (set by US5 — Phase 6). */
+      var isEditing = false;
+
+      /** Snapshot of initiative values taken when edit mode opens (T023). */
+      var editSnapshot = null;
+
+      /* ── New state variables (T002) ─────────────────────────────────── */
+      /** Whether there are unsaved changes (shown in unsaved banner). */
+      var isDirty = false;
+
+      /** Whether the detail panel has uncommitted changes. */
+      var isDirtyPanel = false;
+
+      /** Initiatives that have not yet been positioned on the canvas. */
+      var inboxItems = [];
+
+      /** Currently active tag filter value, or null if no filter applied. */
+      var activeTag = null;
+
+      /** Current view: 'canvas' or 'report'. */
+      var currentView = 'canvas';
+
+      /* ════════════════════════════════════════════════════════════════════
+         deriveQuadrant (T003)
+         Returns the quadrant label for a normalised (x, y) coordinate.
+         x: horizontal axis (0 = left/Urgent, 1 = right/Not Urgent)
+         y: vertical axis   (0 = bottom/Low Impact, 1 = top/High Impact)
+         ════════════════════════════════════════════════════════════════════ */
+      function deriveQuadrant(x, y) {
+        if (x < 0.5 && y >= 0.5) return 'Q1 — Firefighting';
+        if (x >= 0.5 && y >= 0.5) return 'Q2 — Growth';
+        if (x < 0.5 && y < 0.5)  return 'Q3 — Distraction';
+        return 'Q4 — Waste';
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         validateTags (T004)
+         Trims input, splits on whitespace, filters empty tokens, tests each
+         against ^#\S+$; returns { tokens, invalid, valid }.
+         ════════════════════════════════════════════════════════════════════ */
+      function validateTags(input) {
+        var tokens = (input || '').trim().split(/\s+/).filter(Boolean);
+        var invalid = tokens.filter(function (t) { return !/^#\S+$/.test(t); });
+        return { tokens: tokens, invalid: invalid, valid: invalid.length === 0 };
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         applyDotSize (T005)
+         Sizes a dot proportionally to the live canvas width.
+         Null size → hollow dot at M diameter.
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Apply size-proportional dimensions to a dot element.
+       * @param {HTMLElement} dotEl  - the dot div
+       * @param {string|null} size   - 'XS'|'S'|'M'|'L'|'XL'|null
+       * @param {number}      cw     - live canvas width in px
+       */
+      function applyDotSize(dotEl, size, cw) {
+        var qw = cw / 2; /* one quadrant width */
+        var d;
+        switch (size) {
+          case 'XS': d = qw / 16;               break;
+          case 'S':  d = cw * 11 / 128;         break;
+          case 'M':  d = cw * 9  / 64;          break;
+          case 'L':  d = cw * 25 / 128;         break;
+          case 'XL': d = cw / 4;                break;
+          default:   d = cw * 9  / 64; /* M */  break; /* null → M hollow */
+        }
+        dotEl.style.width  = d + 'px';
+        dotEl.style.height = d + 'px';
+        if (!size) {
+          dotEl.style.background = 'transparent';
+          dotEl.style.border     = '2px solid var(--color-primary)';
+        } else {
+          dotEl.style.background = 'var(--color-primary)';
+          dotEl.style.border     = '2px solid #fff';
+        }
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         setDirty (T006)
+         Sets isDirty and shows/hides the #unsaved-banner element.
+         ════════════════════════════════════════════════════════════════════ */
+      function setDirty(val) {
+        isDirty = val;
+        var banner = document.getElementById('unsaved-banner');
+        if (banner) {
+          banner.style.display = val ? 'block' : 'none';
+        }
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         UUID v4 (T004)
+         Matches: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+         ════════════════════════════════════════════════════════════════════ */
+      function generateUUID() {
+        /* Use the native CSPRNG when available (modern browsers). */
+        if (
+          typeof crypto !== 'undefined' &&
+          typeof crypto.randomUUID === 'function'
+        ) {
+          return crypto.randomUUID();
+        }
+        /* Fallback: manually built UUID v4 using Math.random(). */
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+          /[xy]/g,
+          function (c) {
+            var r = (Math.random() * 16) | 0;
+            var v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          }
+        );
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Inbox panel (T011–T015 / A2)
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Rebuild #inbox-list from inboxItems[], update count badge (T014).
+       * Wires [×] buttons to remove from both inboxItems[] and initiatives[].
+       */
+      function renderInbox() {
+        var list  = document.getElementById('inbox-list');
+        var count = inboxItems.length;
+
+        /* Rebuild list rows */
+        list.innerHTML = '';
+        inboxItems.forEach(function (item) {
+          var li = document.createElement('li');
+
+          var handle = document.createElement('span');
+          handle.className = 'drag-handle';
+          handle.textContent = '⠿';
+          handle.setAttribute('data-id', item.id);
+          handle.setAttribute('title', 'Drag to canvas');
+
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'inbox-item-name';
+          nameSpan.textContent = item.name;
+
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-inbox-remove';
+          removeBtn.type = 'button';
+          removeBtn.textContent = '×';
+          removeBtn.dataset.id = item.id;
+
+          li.appendChild(handle);
+          li.appendChild(nameSpan);
+          li.appendChild(removeBtn);
+          list.appendChild(li);
+        });
+
+        /* Update count displays */
+        var countEl = document.getElementById('inbox-count');
+        if (countEl) countEl.textContent = count;
+
+        /* Update the expand badge label */
+        var expandBtn = document.getElementById('btn-inbox-expand');
+        if (expandBtn) expandBtn.textContent = '[▶ ' + count + ']';
+      }
+
+      /**
+       * Submit one inbox entry from the Quick Add form (T013).
+       * Validates Name (required) and Tags (if provided).
+       * Creates initiative with x:null, y:null (unpositioned).
+       */
+      function submitInboxEntry() {
+        var nameEl  = document.getElementById('inbox-name');
+        var tagsEl  = document.getElementById('inbox-tags');
+        var sizeEl  = document.getElementById('inbox-size');
+        var errEl   = document.getElementById('inbox-tags-error');
+
+        var name = nameEl.value.trim();
+        if (!name) {
+          nameEl.focus();
+          return; /* silently skip empty name */
+        }
+
+        /* Validate tags only if something was entered */
+        var tagsRaw = tagsEl.value.trim();
+        var tags = [];
+        if (tagsRaw) {
+          var result = validateTags(tagsRaw);
+          if (!result.valid) {
+            errEl.textContent = 'Use # prefix — e.g. #health';
+            errEl.style.display = 'block';
+            tagsEl.focus();
+            return;
+          }
+          tags = result.tokens;
+        }
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+
+        var size = sizeEl.value || null;
+
+        var initiative = {
+          id:        generateUUID(),
+          name:      name,
+          coer:      null,
+          sob:       null,
+          memoryMap: null,
+          impactMap: null,
+          tmm: {
+            tags:    tags,
+            size:    size,
+            details: '',
+            x:       null,
+            y:       null
+          }
+        };
+
+        initiatives.push(initiative);
+        inboxItems.push(initiative);
+
+        renderInbox();
+
+        /* Clear form and refocus Name */
+        nameEl.value = '';
+        tagsEl.value = '';
+        sizeEl.value = '';
+        nameEl.focus();
+
+        setDirty(true);
+      }
+
+      /**
+       * Open the Inbox in bulk-add mode (T012).
+       * Shows the form, shows [Done], hides [─]. Removes collapsed state.
+       */
+      function openInbox() {
+        var panel = document.getElementById('inbox-panel');
+        panel.classList.remove('collapsed');
+
+        /* Show form / Done, hide collapse button */
+        document.getElementById('inbox-form').style.display = 'flex';
+        document.getElementById('inbox-form').style.flexDirection = 'column';
+        document.getElementById('btn-done-add').style.display = 'inline-block';
+        document.getElementById('btn-inbox-collapse').style.display = 'none';
+
+        renderInbox();
+        document.getElementById('inbox-name').focus();
+      }
+
+      /**
+       * Exit bulk-add mode — hide form, show collapse button (T015).
+       * Called by [Done] button.
+       */
+      function doneAddingInbox() {
+        document.getElementById('inbox-form').style.display = 'none';
+        document.getElementById('btn-done-add').style.display = 'none';
+        document.getElementById('btn-inbox-collapse').style.display = 'inline-block';
+      }
+
+      /**
+       * Collapse the inbox panel to badge-only view (T015).
+       * Called by [─] button.
+       */
+      function collapseInbox() {
+        document.getElementById('inbox-panel').classList.add('collapsed');
+      }
+
+      /**
+       * Expand the inbox panel from badge view (T015).
+       * Called by [▶ N] button.
+       */
+      function expandInbox() {
+        var panel = document.getElementById('inbox-panel');
+        panel.classList.remove('collapsed');
+        /* Ensure we are in list mode (not add mode) */
+        document.getElementById('inbox-form').style.display = 'none';
+        document.getElementById('btn-done-add').style.display = 'none';
+        document.getElementById('btn-inbox-collapse').style.display = 'inline-block';
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Inbox drag-to-canvas (T016–T018 / A3)
+
+         Uses Pointer Events so it works on both mouse and touch.
+         State kept in closure vars so only one drag is ever active.
+         ════════════════════════════════════════════════════════════════════ */
+      (function initInboxDrag() {
+        var dragId   = null;   /* id of the initiative being dragged */
+        var ghost    = null;   /* ghost <div> that follows the pointer */
+        var captureEl = null;  /* element that captured the pointer */
+
+        /* T016 — pointerdown on drag handles inside #inbox-list */
+        document.getElementById('inbox-list').addEventListener('pointerdown', function (e) {
+          var handle = e.target.closest('.drag-handle');
+          if (!handle) return;
+
+          dragId = handle.dataset.id;
+          if (!dragId) return;
+
+          e.preventDefault(); /* suppress text selection */
+
+          /* Create ghost dot */
+          ghost = document.createElement('div');
+          ghost.id = 'drag-ghost';
+          ghost.style.cssText = [
+            'position:fixed',
+            'width:32px',
+            'height:32px',
+            'background:var(--color-primary)',
+            'border-radius:50%',
+            'opacity:0.5',
+            'pointer-events:none',
+            'z-index:9999',
+            'transform:translate(-50%,-50%)',
+            'border:2px solid #fff',
+            'box-shadow:0 2px 8px rgba(0,0,0,.25)'
+          ].join(';');
+          ghost.style.left = e.clientX + 'px';
+          ghost.style.top  = e.clientY + 'px';
+          document.body.appendChild(ghost);
+
+          /* Capture pointer to the handle element */
+          captureEl = handle;
+          handle.setPointerCapture(e.pointerId);
+        });
+
+        /* T017 — pointermove: move ghost to follow pointer */
+        document.getElementById('inbox-list').addEventListener('pointermove', function (e) {
+          if (!ghost) return;
+          ghost.style.left = e.clientX + 'px';
+          ghost.style.top  = e.clientY + 'px';
+        });
+
+        /* T018 — pointerup: drop on canvas or cancel */
+        document.getElementById('inbox-list').addEventListener('pointerup', function (e) {
+          if (!ghost) return;
+
+          /* Remove ghost from DOM */
+          document.body.removeChild(ghost);
+          ghost = null;
+          captureEl = null;
+
+          if (!dragId) return;
+
+          /* Check whether pointer landed inside #canvas-area */
+          var canvasArea = document.getElementById('canvas-area');
+          var rect = canvasArea.getBoundingClientRect();
+          var px = e.clientX;
+          var py = e.clientY;
+
+          if (px >= rect.left && px <= rect.right && py >= rect.top && py <= rect.bottom) {
+            /* Compute normalised coordinates relative to canvas area */
+            var normX = Math.max(0, Math.min(1, (px - rect.left) / rect.width));
+            var normY = Math.max(0, Math.min(1, 1 - (py - rect.top) / rect.height));
+
+            /* Find the initiative in initiatives[] and position it */
+            for (var i = 0; i < initiatives.length; i++) {
+              if (initiatives[i].id === dragId) {
+                initiatives[i].tmm.x = normX;
+                initiatives[i].tmm.y = normY;
+                break;
+              }
+            }
+
+            /* Remove from inboxItems (it is now positioned on canvas) */
+            inboxItems = inboxItems.filter(function (it) { return it.id !== dragId; });
+
+            renderInbox();
+            renderCanvas();
+            setDirty(true);
+          }
+          /* If dropped outside canvas: do nothing — inbox row remains */
+
+          dragId = null;
+        });
+
+        /* Cancel drag on pointercancel */
+        document.getElementById('inbox-list').addEventListener('pointercancel', function () {
+          if (ghost) { document.body.removeChild(ghost); ghost = null; }
+          dragId    = null;
+          captureEl = null;
+        });
+      }());
+
+      /* ════════════════════════════════════════════════════════════════════
+         renderCanvas (T003 stub → T009 full implementation)
+
+         Iterates initiatives[] and syncs DOM: removes stale dots, creates
+         one absolutely-positioned .dot per initiative at:
+           left = x * 100%
+           top  = (1 - y) * 100%
+         (canvas origin = top-left; y=1 → top of canvas)
+         ════════════════════════════════════════════════════════════════════ */
+      function renderCanvas() {
+        var canvas = document.getElementById('canvas');
+
+        /* Remove all existing dots (leave quadrant divs in place). */
+        var oldDots = canvas.querySelectorAll('.dot');
+        for (var i = 0; i < oldDots.length; i++) {
+          canvas.removeChild(oldDots[i]);
+        }
+
+        /* ── T027: Rebuild #tag-filter <option> list ───────────────────── */
+        var tagUnion = {};
+        for (var ti = 0; ti < initiatives.length; ti++) {
+          var tArr = initiatives[ti].tmm && initiatives[ti].tmm.tags;
+          if (Array.isArray(tArr)) {
+            for (var tj = 0; tj < tArr.length; tj++) {
+              tagUnion[tArr[tj]] = true;
+            }
+          }
+        }
+        var tagSelect = document.getElementById('tag-filter');
+        var prevValue = tagSelect.value; /* preserve selection */
+        while (tagSelect.options.length > 1) tagSelect.remove(1); /* keep (all tags) */
+        var sortedTags = Object.keys(tagUnion).sort();
+        for (var si = 0; si < sortedTags.length; si++) {
+          var opt = document.createElement('option');
+          opt.value = sortedTags[si];
+          opt.textContent = sortedTags[si];
+          tagSelect.appendChild(opt);
+        }
+        /* Restore activeTag selection if still present; otherwise reset */
+        if (activeTag && tagUnion[activeTag]) {
+          tagSelect.value = activeTag;
+        } else if (activeTag && !tagUnion[activeTag]) {
+          activeTag = null;
+        }
+
+        /* ── T028: Show/hide [× Clear] button ─────────────────────────── */
+        document.getElementById('btn-clear-filter').style.display = activeTag ? 'inline-block' : 'none';
+
+        /* Read live canvas width for proportional dot sizing. */
+        var cw = canvas.getBoundingClientRect().width || canvas.offsetWidth || 400;
+
+        /* Build one dot per initiative — skip unpositioned (T015). */
+        var renderedCount = 0;
+        initiatives.forEach(function (initiative) {
+          /* Skip initiatives that have not been placed on the canvas yet. */
+          if (initiative.tmm.x === null || initiative.tmm.y === null) return;
+
+          /* ── T028: Skip if active tag filter doesn't match ──────────── */
+          if (activeTag !== null) {
+            var itTags = (initiative.tmm && Array.isArray(initiative.tmm.tags)) ? initiative.tmm.tags : [];
+            if (itTags.indexOf(activeTag) === -1) return;
+          }
+
+          renderedCount++;
+          var dot = document.createElement('div');
+          dot.className = 'dot';
+          dot.dataset.id = initiative.id;
+          dot.setAttribute('role', 'button');
+          dot.setAttribute('aria-label', 'Initiative: ' + initiative.name);
+          dot.setAttribute('tabindex', '0');
+
+          /* Position: left = x * 100%, top = (1 − y) * 100% */
+          dot.style.left = (initiative.tmm.x * 100) + '%';
+          dot.style.top  = ((1 - initiative.tmm.y) * 100) + '%';
+
+          /* Visible label underneath the dot circle */
+          var label = document.createElement('span');
+          label.className = 'dot-label';
+          label.textContent = initiative.name;
+          dot.appendChild(label);
+
+          applyDotSize(dot, initiative.tmm.size || null, cw);
+
+          /* ── Drag (T017–T019) + click/keyboard (T010) handlers ──── */
+          (function attachHandlers(dotEl, init) {
+            var isDragging = false;
+            var hasMoved   = false;
+            var offsetX    = 0, offsetY = 0;
+            var startX     = 0, startY  = 0;
+
+            /* pointerdown: begin drag (T017) */
+            dotEl.addEventListener('pointerdown', function (e) {
+              /* Only primary button for mouse; all pointer types for touch/pen */
+              if (e.pointerType === 'mouse' && e.button !== 0) return;
+              e.preventDefault(); /* suppress text-selection during drag */
+
+              var cvs = document.getElementById('canvas');
+              var cr  = cvs.getBoundingClientRect();
+              var dr  = dotEl.getBoundingClientRect();
+
+              /* Centre of the dot relative to canvas top-left */
+              var cx = dr.left + dr.width  / 2 - cr.left;
+              var cy = dr.top  + dr.height / 2 - cr.top;
+
+              /* Offset from dot centre to pointer (≈0 when clicking centre) */
+              offsetX = (e.clientX - cr.left) - cx;
+              offsetY = (e.clientY - cr.top)  - cy;
+
+              startX = e.clientX;
+              startY = e.clientY;
+
+              isDragging = true;
+              hasMoved   = false;
+
+              dotEl.setPointerCapture(e.pointerId);
+              dotEl.classList.add('dragging');
+            });
+
+            /* pointermove: real-time repositioning (T018) */
+            dotEl.addEventListener('pointermove', function (e) {
+              if (!isDragging) return;
+
+              var dx = e.clientX - startX;
+              var dy = e.clientY - startY;
+              if (Math.sqrt(dx * dx + dy * dy) > 4) hasMoved = true;
+
+              var cvs = document.getElementById('canvas');
+              var cr  = cvs.getBoundingClientRect();
+
+              var newX = e.clientX - cr.left - offsetX;
+              var newY = e.clientY - cr.top  - offsetY;
+
+              /* Clamp dot centre to canvas boundary (T018) */
+              newX = Math.max(0, Math.min(cr.width,  newX));
+              newY = Math.max(0, Math.min(cr.height, newY));
+
+              dotEl.style.left = newX + 'px';
+              dotEl.style.top  = newY + 'px';
+            });
+
+            /* pointerup: commit position or treat as click (T019) */
+            dotEl.addEventListener('pointerup', function (e) {
+              if (!isDragging) return;
+
+              dotEl.releasePointerCapture(e.pointerId);
+              dotEl.classList.remove('dragging');
+              isDragging = false;
+
+              if (!hasMoved) {
+                /* No significant movement — treat as click (T020).
+                   Toggle: click same dot with clean panel → close;
+                   click any other dot or panel is dirty → open. */
+                if (selectedInitiativeId === init.id && !isDirtyPanel) {
+                  closeDetailPanel();
+                } else {
+                  openDetailPanel(init.id);
+                }
+                return;
+              }
+
+              var cvs = document.getElementById('canvas');
+              var cr  = cvs.getBoundingClientRect();
+
+              var newX = e.clientX - cr.left - offsetX;
+              var newY = e.clientY - cr.top  - offsetY;
+
+              newX = Math.max(0, Math.min(cr.width,  newX));
+              newY = Math.max(0, Math.min(cr.height, newY));
+
+              /* Normalise to [0.0, 1.0] (T019) */
+              var normX = Math.max(0, Math.min(1, newX / cr.width));
+              var normY = Math.max(0, Math.min(1, 1 - newY / cr.height));
+
+              /* Update the matching initiative in state */
+              for (var i = 0; i < initiatives.length; i++) {
+                if (initiatives[i].id === init.id) {
+                  initiatives[i].tmm.x = normX;
+                  initiatives[i].tmm.y = normY;
+                  break;
+                }
+              }
+
+              renderCanvas();
+              setDirty(true);
+            });
+
+            /* Keyboard: Enter / Space opens the panel */
+            dotEl.addEventListener('keydown', function (e) {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openDetailPanel(init.id);
+              }
+            });
+
+          }(dot, initiative));
+
+          canvas.appendChild(dot);
+        });
+
+        /* ── T029: Show empty-filter message when no dots rendered ─────── */
+        var emptyMsg = document.getElementById('filter-empty-msg');
+        if (emptyMsg) {
+          emptyMsg.style.display = (activeTag !== null && renderedCount === 0) ? 'block' : 'none';
+        }
+
+        /* ── T049 / FR-UX-001: Show empty-canvas hint when no dots are positioned ── */
+        var positionedCount = initiatives.filter(function (i) { return i.tmm && i.tmm.x !== null; }).length;
+        var emptyHint = document.getElementById('canvas-empty-hint');
+        if (emptyHint) {
+          emptyHint.style.display = (positionedCount === 0) ? 'block' : 'none';
+        }
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Detail panel — Phase 6 (T019–T024 / A4)
+
+         Always-edit mode: panel opens with all fields editable.
+         [Close]   — gated by isDirtyPanel (pointer-events:none when dirty).
+         [Cancel]  — restores editSnapshot and closes.
+         [Confirm] — validates Name, stores all fields, re-renders canvas.
+         [Delete]  — shows inline confirmation; [Yes, delete] removes initiative.
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Enable or disable the [Close] button based on panel dirty state (T021).
+       * @param {boolean} dirty
+       */
+      function setPanelCloseable(dirty) {
+        var btn = document.getElementById('btn-panel-close');
+        if (dirty) {
+          btn.style.opacity       = '0.4';
+          btn.style.cursor        = 'not-allowed';
+          btn.style.pointerEvents = 'none';
+        } else {
+          btn.style.opacity       = '1';
+          btn.style.cursor        = 'pointer';
+          btn.style.pointerEvents = 'auto';
+        }
+      }
+
+      /**
+       * Open the detail panel for the given initiative id (T020).
+       * Always opens in edit mode. Populates fields from initiatives[].
+       */
+      function openDetailPanel(id) {
+        var initiative = null;
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === id) { initiative = initiatives[i]; break; }
+        }
+        if (!initiative) return;
+
+        selectedInitiativeId = id;
+
+        /* Populate fields */
+        var tmm = initiative.tmm || {};
+        document.getElementById('edit-name').value    = initiative.name || '';
+        document.getElementById('edit-tags').value    = (tmm.tags && tmm.tags.length) ? tmm.tags.join(' ') : '';
+        document.getElementById('edit-size').value    = tmm.size || '';
+        document.getElementById('edit-details').value = tmm.details || '';
+
+        /* Hide inline errors */
+        document.getElementById('edit-name-error').style.display  = 'none';
+        document.getElementById('edit-tags-error').style.display  = 'none';
+
+        /* Take snapshot for Cancel (T022) */
+        editSnapshot = {
+          name:    initiative.name || '',
+          tags:    (tmm.tags && tmm.tags.length) ? tmm.tags.join(' ') : '',
+          size:    tmm.size || '',
+          details: tmm.details || ''
+        };
+
+        /* Reset dirty state and enable [Close] */
+        isDirtyPanel = false;
+        setPanelCloseable(false);
+
+        /* Hide delete confirmation if previously shown */
+        document.getElementById('delete-confirm').style.display = 'none';
+
+        /* Show panel in flex mode */
+        document.getElementById('detail-panel').style.display = 'flex';
+
+        /* Focus Name field */
+        document.getElementById('edit-name').focus();
+      }
+
+      /**
+       * Close the detail panel and reset state (T022).
+       */
+      function closeDetailPanel() {
+        selectedInitiativeId = null;
+        isDirtyPanel         = false;
+        editSnapshot         = null;
+        document.getElementById('detail-panel').style.display = 'none';
+      }
+
+      /**
+       * Mark panel as dirty when any field changes (T021).
+       * Called by input/change listeners wired at page load.
+       */
+      function markPanelDirty() {
+        if (!isDirtyPanel) {
+          isDirtyPanel = true;
+          setPanelCloseable(true);
+        }
+      }
+
+      /**
+       * Confirm edits: validate Name, store all fields, re-render (T023).
+       */
+      function confirmEdit() {
+        var name = document.getElementById('edit-name').value.trim();
+
+        /* Name required */
+        if (!name) {
+          document.getElementById('edit-name-error').style.display = '';
+          document.getElementById('edit-name').focus();
+          return;
+        }
+        document.getElementById('edit-name-error').style.display = 'none';
+
+        /* Tags — validate with validateTags() (T025 / B1) */
+        var tagsRaw    = document.getElementById('edit-tags').value.trim();
+        var tagsTokens = [];
+        if (tagsRaw) {
+          var tagsResult = validateTags(tagsRaw);
+          if (!tagsResult.valid) {
+            document.getElementById('edit-tags-error').textContent = 'Use # prefix — e.g. #health';
+            document.getElementById('edit-tags-error').style.display = '';
+            document.getElementById('edit-tags').focus();
+            return;
+          }
+          document.getElementById('edit-tags-error').style.display = 'none';
+          tagsTokens = tagsResult.tokens;
+        } else {
+          document.getElementById('edit-tags-error').style.display = 'none';
+        }
+
+        var size    = document.getElementById('edit-size').value || null;
+        var details = document.getElementById('edit-details').value;
+
+        /* Update initiative in state */
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === selectedInitiativeId) {
+            initiatives[i].name        = name;
+            initiatives[i].tmm.tags    = tagsTokens;
+            initiatives[i].tmm.size    = size;
+            initiatives[i].tmm.details = details;
+            break;
+          }
+        }
+
+        isDirtyPanel = false;
+        renderCanvas();
+        setDirty(true);
+        closeDetailPanel();
+      }
+
+      /**
+       * Cancel panel edits: restore fields from snapshot and close (T022).
+       */
+      function cancelEdit() {
+        if (editSnapshot) {
+          document.getElementById('edit-name').value    = editSnapshot.name;
+          document.getElementById('edit-tags').value    = editSnapshot.tags;
+          document.getElementById('edit-size').value    = editSnapshot.size;
+          document.getElementById('edit-details').value = editSnapshot.details;
+        }
+        closeDetailPanel();
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Add Initiative modal — kept for backward-compat; Quick Add (T012) is primary
+         ════════════════════════════════════════════════════════════════════ */
+      function openModal() {
+        document.getElementById('field-name').value     = '';
+        document.getElementById('field-category').value = '';
+        document.getElementById('field-details').value  = '';
+        document.getElementById('field-name').classList.remove('input-error');
+        document.getElementById('error-name').classList.remove('visible');
+        document.getElementById('modal-overlay').classList.add('visible');
+        document.getElementById('field-name').focus();
+      }
+
+      /** Close the Add Initiative modal without saving. */
+      function closeModal() {
+        document.getElementById('modal-overlay').classList.remove('visible');
+      }
+
+      /**
+       * Validate and submit the Add Initiative form (T008).
+       * - Validates Name non-empty; shows inline error if empty.
+       * - Generates UUID v4 id.
+       * - Creates initiative object with tmm section at canvas centre (0.5, 0.5).
+       * - Pushes to initiatives[], closes modal, calls renderCanvas().
+       */
+      function submitModal() {
+        var name = document.getElementById('field-name').value.trim();
+
+        if (!name) {
+          document.getElementById('field-name').classList.add('input-error');
+          document.getElementById('error-name').classList.add('visible');
+          document.getElementById('field-name').focus();
+          return;
+        }
+
+        var category = document.getElementById('field-category').value.trim();
+        var details  = document.getElementById('field-details').value;
+
+        var initiative = {
+          id:        generateUUID(),
+          name:      name,
+          coer:      null,
+          sob:       null,
+          memoryMap: null,
+          impactMap: null,
+          tmm: {
+            category: category,
+            details:  details,
+            x:        0.5,
+            y:        0.5
+          }
+        };
+
+        initiatives.push(initiative);
+        closeModal();
+        renderCanvas();
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Save (T012, T013)
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Build the effectivenessToolkit JSON envelope and trigger a browser
+       * download (T012).
+       *
+       * Round-trip preservation (T013 / Constitution Principle VI):
+       * - For each initiative, spread its original data from loadedProjectFile
+       *   so that coer, sob, memoryMap, impactMap and any unknown top-level
+       *   initiative fields are written back unchanged.
+       * - For new initiatives (not in the loaded file), those sections are null.
+       * - Unknown extra fields inside the tmm section are also preserved by
+       *   spreading originalTmm before the known fields.
+       */
+      function saveToFile() {
+        var savedInitiatives = initiatives.map(function (initiative) {
+          /* Find original initiative record from the loaded file, if any. */
+          var original = null;
+          if (
+            loadedProjectFile &&
+            loadedProjectFile.effectivenessToolkit &&
+            Array.isArray(loadedProjectFile.effectivenessToolkit.initiatives)
+          ) {
+            var pool = loadedProjectFile.effectivenessToolkit.initiatives;
+            for (var j = 0; j < pool.length; j++) {
+              if (pool[j].id === initiative.id) { original = pool[j]; break; }
+            }
+          }
+
+          /*
+           * Base object:
+           *   • If found in loaded file → spread all original fields (preserves
+           *     coer, sob, memoryMap, impactMap, and any unknown extras).
+           *   • If new → initialise with null sections per contract (T008).
+           */
+          var saved = original
+            ? Object.assign({}, original)
+            : {
+                id:        initiative.id,
+                name:      initiative.name,
+                coer:      null,
+                sob:       null,
+                memoryMap: null,
+                impactMap: null
+              };
+
+          /* Always sync id and name from in-memory state. */
+          saved.id   = initiative.id;
+          saved.name = initiative.name;
+
+          /*
+           * Write tmm section: spread originalTmm first so unknown extra
+           * fields are preserved (T015), then override the known fields.
+           */
+          var originalTmm = (original && original.tmm) ? original.tmm : {};
+          saved.tmm = Object.assign({}, originalTmm, {
+            tags:     Array.isArray(initiative.tmm.tags) ? initiative.tmm.tags : [],
+            size:     initiative.tmm.size !== undefined ? initiative.tmm.size : null,
+            details:  initiative.tmm.details,
+            x:        initiative.tmm.x,
+            y:        initiative.tmm.y
+          });
+
+          return saved;
+        });
+
+        var envelope = {
+          effectivenessToolkit: {
+            version:      '1.0',
+            lastModified: new Date().toISOString(),
+            initiatives:  savedInitiatives
+          }
+        };
+
+        var json = JSON.stringify(envelope, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'effectiveness-toolkit.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setDirty(false);
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Load (T014, T015)
+         ════════════════════════════════════════════════════════════════════ */
+
+      /** Open a native file picker (T014). */
+      function triggerLoad() {
+        document.getElementById('file-input').click();
+      }
+
+      /**
+       * Parse the selected JSON file and restore canvas state (T014).
+       *
+       * Edge cases handled (T015):
+       *  • no tmm key on an initiative    → that initiative is silently skipped
+       *  • missing / empty initiatives[]  → render empty canvas
+       *  • unknown extra fields in tmm    → preserved in loadedProjectFile and
+       *                                      written back on next save (via
+       *                                      Object.assign spread in saveToFile)
+       *  • invalid JSON                   → console.error, no user-facing crash
+       */
+      function loadFromFile(file) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            var parsed = JSON.parse(e.target.result);
+            loadedProjectFile = parsed;
+
+            var envelope        = parsed && parsed.effectivenessToolkit;
+            var rawInitiatives  = (envelope && Array.isArray(envelope.initiatives))
+              ? envelope.initiatives
+              : [];
+
+            if (rawInitiatives.length === 0) {
+              initiatives = [];
+              activeTag = null;
+              if (currentView === 'report') {
+                renderReportView();
+              } else {
+                renderCanvas();
+              }
+              setDirty(false);
+              return;
+            }
+
+            initiatives = rawInitiatives
+              /* Keep ALL valid initiatives — including those with no tmm section.
+                 Dropping non-tmm initiatives would silently delete COER / Memory
+                 Map entries from the shared project file on next save, violating
+                 Constitution Principle VI (round-trip preservation).
+                 Initiatives with no tmm section are placed at canvas centre (0.5,
+                 0.5) per Contract 4 rule 6; they only receive a tmm section once
+                 the user interacts with them (drags or edits). */
+              .filter(function (item) {
+                return item && item.id && item.name;
+              })
+              .map(function (item) {
+                var tmm = item.tmm || {};
+                return {
+                  id:        item.id,
+                  name:      item.name,
+                  coer:      item.coer      !== undefined ? item.coer      : null,
+                  sob:       item.sob       !== undefined ? item.sob       : null,
+                  memoryMap: item.memoryMap !== undefined ? item.memoryMap : null,
+                  impactMap: item.impactMap !== undefined ? item.impactMap : null,
+                  tmm: {
+                    tags:    Array.isArray(tmm.tags) ? tmm.tags : [],
+                    size:    ['XS','S','M','L','XL'].indexOf(tmm.size) !== -1 ? tmm.size : null,
+                    details:  tmm.details  !== undefined ? tmm.details   : '',
+                    /* Clamp coordinates to [0.0, 1.0] (FR-US2.04 / data-model).
+                       Default to canvas centre (0.5, 0.5) when no tmm section. */
+                    x: typeof tmm.x === 'number'
+                      ? Math.max(0, Math.min(1, tmm.x))
+                      : 0.5,
+                    y: typeof tmm.y === 'number'
+                      ? Math.max(0, Math.min(1, tmm.y))
+                      : 0.5
+                  }
+                };
+              });
+
+            activeTag = null; /* FR-000.06: reset filter on every load (T031) */
+            if (currentView === 'report') {
+              renderReportView();
+            } else {
+              renderCanvas();
+            }
+            setDirty(false); /* T031 */
+
+          } catch (err) {
+            console.error('[TMM] Failed to parse project file:', err);
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Event listeners
+         ════════════════════════════════════════════════════════════════════ */
+      /* ════════════════════════════════════════════════════════════════════
+         Report view (T040–T048 / B4)
+
+         renderReportView  — rebuilds <tbody> from initiatives[]
+         activateCellEdit  — replaces cell text with an editor widget
+         commitCellEdit    — validates, updates state, restores display, advances focus
+         exportMarkdown    — builds GFM table and triggers download
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Return the display string for a given field on an initiative.
+       * Used by renderReportView() and commitCellEdit().
+       */
+      function getCellDisplayValue(initiative, field) {
+        if (field === 'name') return initiative.name || '';
+        if (field === 'tags') {
+          var tags = (initiative.tmm && Array.isArray(initiative.tmm.tags)) ? initiative.tmm.tags : [];
+          return tags.join(' ');
+        }
+        if (field === 'size')    return (initiative.tmm && initiative.tmm.size)    ? initiative.tmm.size    : '';
+        if (field === 'details') return (initiative.tmm && initiative.tmm.details) ? initiative.tmm.details : '';
+        return '';
+      }
+
+      /**
+       * Render the report table from initiatives[] (T041).
+       * Rebuilds <tbody> entirely; handles empty state.
+       */
+      function renderReportView() {
+        var tbody = document.querySelector('#report-table tbody');
+        tbody.innerHTML = '';
+
+        /* Reset UI controls */
+        var selectAll = document.getElementById('select-all-checkbox');
+        if (selectAll) selectAll.checked = false;
+        document.getElementById('bulk-tag-msg').textContent  = '';
+        document.getElementById('bulk-tag-input').value      = '';
+
+        if (initiatives.length === 0) {
+          var emptyRow = document.createElement('tr');
+          var emptyTd  = document.createElement('td');
+          emptyTd.setAttribute('colspan', '6');
+          emptyTd.textContent = 'No initiatives yet — go back to the canvas to add your first initiative.';
+          emptyTd.style.cssText = 'text-align:center;padding:24px 16px;color:var(--color-muted);font-style:italic';
+          emptyRow.appendChild(emptyTd);
+          tbody.appendChild(emptyRow);
+          return;
+        }
+
+        initiatives.forEach(function (initiative, rowIdx) {
+          var tr = document.createElement('tr');
+
+          /* Checkbox td */
+          var checkTd = document.createElement('td');
+          var cb      = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className  = 'row-checkbox';
+          cb.dataset.id = initiative.id;
+          checkTd.appendChild(cb);
+          tr.appendChild(checkTd);
+
+          /* Q cell (read-only — short label e.g. "Q1") */
+          var qTd  = document.createElement('td');
+          qTd.className = 'q-cell';
+          var fullQ = deriveQuadrant(
+            typeof initiative.tmm.x === 'number' ? initiative.tmm.x : 0.5,
+            typeof initiative.tmm.y === 'number' ? initiative.tmm.y : 0.5
+          );
+          qTd.textContent = fullQ.split(' ')[0]; /* e.g. "Q1" */
+          tr.appendChild(qTd);
+
+          /* Editable cells: Name, Tags, Size, Details */
+          var editFields = ['name', 'tags', 'size', 'details'];
+          editFields.forEach(function (field, colIdx) {
+            var td = document.createElement('td');
+            td.className  = 'editable-cell';
+            td.tabIndex   = (colIdx === 0 && rowIdx === 0) ? 0 : -1;
+            td.dataset.field  = field;
+            td.dataset.id     = initiative.id;
+            td.dataset.rowIdx = rowIdx;
+            td.dataset.colIdx = colIdx;
+            td.textContent = getCellDisplayValue(initiative, field);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      /**
+       * Activate inline edit mode on a cell (T043).
+       * Replaces cell text with an input/select/textarea.
+       * Binds Esc (restore), Tab/Enter (commit+advance), blur/Size (commit+stay).
+       */
+      function activateCellEdit(cell) {
+        if (cell.classList.contains('editing')) return;
+
+        var field = cell.dataset.field;
+        var id    = cell.dataset.id;
+
+        /* Locate the initiative */
+        var initiative = null;
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === id) { initiative = initiatives[i]; break; }
+        }
+        if (!initiative) return;
+
+        var snapshot = getCellDisplayValue(initiative, field);
+        cell.classList.add('editing');
+        cell.innerHTML = '';
+
+        /* Build editor widget */
+        var editor;
+        if (field === 'size') {
+          editor = document.createElement('select');
+          ['', 'XS', 'S', 'M', 'L', 'XL'].forEach(function (s) {
+            var opt       = document.createElement('option');
+            opt.value     = s;
+            opt.textContent = s || '(no size)';
+            if (s === (initiative.tmm.size || '')) opt.selected = true;
+            editor.appendChild(opt);
+          });
+        } else if (field === 'details') {
+          editor = document.createElement('textarea');
+          editor.value = snapshot;
+        } else {
+          editor = document.createElement('input');
+          editor.type  = 'text';
+          editor.value = snapshot;
+        }
+
+        var errSpan = document.createElement('span');
+        errSpan.className = 'cell-error';
+        cell.appendChild(editor);
+        cell.appendChild(errSpan);
+        editor.focus();
+        if (editor.select) { try { editor.select(); } catch (ex) { /* ignore */ } }
+
+        /* Keyboard bindings (T043) */
+        editor.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            cell.classList.remove('editing');
+            cell.innerHTML   = '';
+            cell.textContent = snapshot;
+            cell.tabIndex    = 0;
+            cell.focus();
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+            commitCellEdit(cell, e.shiftKey ? -1 : 1);
+          } else if (e.key === 'Enter' && field !== 'details') {
+            e.preventDefault();
+            e.stopPropagation();
+            commitCellEdit(cell, 1);
+          }
+        });
+
+        /* Commit on blur for all editor types — covers clicks on Back to Canvas,
+           Save, Bulk Apply, etc. that steal focus without Tab/Enter (T043).
+           setTimeout lets Tab/Enter fire first; the 'editing' guard prevents
+           double-commit since those paths already remove the class. */
+        editor.addEventListener('blur', function () {
+          setTimeout(function () {
+            if (cell.classList.contains('editing')) commitCellEdit(cell, 0);
+          }, 150);
+        });
+      }
+
+      /**
+       * Commit an in-progress cell edit: validate, update state, restore display,
+       * and advance focus (T044).
+       * @param {HTMLElement} cell      - the <td> in edit mode
+       * @param {number}      direction - 1=next, -1=prev, 0=stay
+       */
+      function commitCellEdit(cell, direction) {
+        if (!cell.classList.contains('editing')) return;
+
+        var field   = cell.dataset.field;
+        var id      = cell.dataset.id;
+        var editor  = cell.querySelector('input, select, textarea');
+        var errSpan = cell.querySelector('.cell-error');
+        if (!editor) return;
+
+        /* Locate the initiative */
+        var initiative = null;
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === id) { initiative = initiatives[i]; break; }
+        }
+        if (!initiative) return;
+
+        var value = editor.value;
+
+        /* Field-specific validation and update */
+        if (field === 'name') {
+          var trimmed = value.trim();
+          if (!trimmed) {
+            if (errSpan) { errSpan.textContent = 'Name is required'; errSpan.style.display = 'block'; }
+            editor.focus();
+            return;
+          }
+          initiative.name = trimmed;
+
+        } else if (field === 'tags') {
+          var tagsRaw = value.trim();
+          if (tagsRaw) {
+            var tagResult = validateTags(tagsRaw);
+            if (!tagResult.valid) {
+              if (errSpan) { errSpan.textContent = 'Use # prefix — e.g. #health'; errSpan.style.display = 'block'; }
+              editor.focus();
+              return;
+            }
+            initiative.tmm.tags = tagResult.tokens;
+          } else {
+            initiative.tmm.tags = [];
+          }
+
+        } else if (field === 'size') {
+          initiative.tmm.size = value || null;
+
+        } else if (field === 'details') {
+          initiative.tmm.details = value;
+        }
+
+        /* Success — clear error, mark dirty, restore cell to text display */
+        if (errSpan) errSpan.style.display = 'none';
+        setDirty(true);
+
+        var newDisplay = getCellDisplayValue(initiative, field);
+        cell.classList.remove('editing');
+        cell.innerHTML   = '';
+        cell.textContent = newDisplay;
+        cell.tabIndex    = 0;
+
+        /* Advance focus (T044) */
+        if (direction !== 0) {
+          var rowIdx    = parseInt(cell.dataset.rowIdx, 10);
+          var colIdx    = parseInt(cell.dataset.colIdx, 10);
+          var totalCols = 4;
+          var totalRows = initiatives.length;
+          var newRow    = rowIdx;
+          var newCol    = colIdx + direction;
+
+          if (newCol >= totalCols) { newCol = 0; newRow = Math.min(totalRows - 1, newRow + 1); }
+          if (newCol < 0)          { newCol = totalCols - 1; newRow = Math.max(0, newRow - 1); }
+
+          var nextCell = document.querySelector(
+            '#report-table .editable-cell[data-row-idx="' + newRow + '"][data-col-idx="' + newCol + '"]'
+          );
+          if (nextCell) nextCell.focus(); else cell.focus();
+        } else {
+          cell.focus();
+        }
+      }
+
+      /**
+       * Build a GFM table from initiatives[] and trigger a .md download (T048).
+       */
+      function exportMarkdown() {
+        var header    = '| Quadrant | Name | Tags | Size | Details |';
+        var separator = '|---|---|---|---|---|';
+
+        var rows = initiatives.map(function (initiative) {
+          var q       = deriveQuadrant(
+            typeof initiative.tmm.x === 'number' ? initiative.tmm.x : 0.5,
+            typeof initiative.tmm.y === 'number' ? initiative.tmm.y : 0.5
+          );
+          var name    = (initiative.name || '').replace(/\|/g, '\\|');
+          var tags    = ((initiative.tmm && Array.isArray(initiative.tmm.tags))
+                           ? initiative.tmm.tags : []).join(' ').replace(/\|/g, '\\|');
+          var size    = (initiative.tmm && initiative.tmm.size) ? initiative.tmm.size : '';
+          var details = ((initiative.tmm && initiative.tmm.details) ? initiative.tmm.details : '')
+                           .replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+          return '| ' + q + ' | ' + name + ' | ' + tags + ' | ' + size + ' | ' + details + ' |';
+        });
+
+        var md   = [header, separator].concat(rows).join('\n');
+        var blob = new Blob([md], { type: 'text/markdown' });
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'effectiveness-toolkit-tmm-report.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Event listeners
+         ════════════════════════════════════════════════════════════════════ */
+
+      document.getElementById('btn-save').addEventListener('click', saveToFile);
+      document.getElementById('btn-load').addEventListener('click', triggerLoad);
+
+      document.getElementById('file-input').addEventListener('change', function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (file) {
+          loadFromFile(file);
+          /* Reset so the same file can be reloaded if needed. */
+          e.target.value = '';
+        }
+      });
+
+      document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
+      document.getElementById('btn-modal-submit').addEventListener('click', submitModal);
+
+      /* Backdrop click closes the modal (outside #modal-box). */
+      document.getElementById('modal-overlay').addEventListener('click', function (e) {
+        if (e.target === document.getElementById('modal-overlay')) closeModal();
+      });
+
+      /* Enter in the Name field submits the legacy modal form. */
+      document.getElementById('field-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') submitModal();
+      });
+
+      /* ── Inbox panel listeners (T012–T015) ─────────────────────────────── */
+
+      /* [+ Quick Add] opens Inbox in add mode */
+      document.getElementById('btn-quick-add').addEventListener('click', openInbox);
+
+      /* [Done] exits add mode */
+      document.getElementById('btn-done-add').addEventListener('click', doneAddingInbox);
+
+      /* [─] collapses inbox */
+      document.getElementById('btn-inbox-collapse').addEventListener('click', collapseInbox);
+
+      /* [▶ N] expands inbox */
+      document.getElementById('btn-inbox-expand').addEventListener('click', expandInbox);
+
+      /* Inbox form keyboard navigation: Tab cycles Name→Tags→Size→Name; Enter submits */
+      document.getElementById('inbox-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitInboxEntry(); }
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-tags').focus();
+        }
+      });
+      document.getElementById('inbox-tags').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitInboxEntry(); }
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-size').focus();
+        }
+        if (e.key === 'Tab' && e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-name').focus();
+        }
+      });
+      document.getElementById('inbox-size').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitInboxEntry(); }
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-name').focus();
+        }
+        if (e.key === 'Tab' && e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('inbox-tags').focus();
+        }
+      });
+
+      /* Delegated [×] remove buttons on inbox list */
+      document.getElementById('inbox-list').addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn-inbox-remove');
+        if (!btn) return;
+        var id = btn.dataset.id;
+        inboxItems  = inboxItems.filter(function (it) { return it.id !== id; });
+        initiatives = initiatives.filter(function (it) { return it.id !== id; });
+        renderInbox();
+        setDirty(true);
+      });
+
+      /* Escape closes modal. */
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          if (document.getElementById('modal-overlay').classList.contains('visible')) {
+            closeModal();
+          }
+        }
+      });
+
+      /* ── Tag filter listeners (T028 / B1) ──────────────────────────────── */
+
+      document.getElementById('tag-filter').addEventListener('change', function () {
+        activeTag = this.value || null;
+        renderCanvas();
+      });
+
+      document.getElementById('btn-clear-filter').addEventListener('click', function () {
+        activeTag = null;
+        document.getElementById('tag-filter').value = '';
+        document.getElementById('btn-clear-filter').style.display = 'none';
+        renderCanvas();
+      });
+
+      /* ── Detail panel listeners (T020–T024 / A4) ───────────────────────── */
+
+      /* [Close] — only closes when !isDirtyPanel (pointer-events:none when dirty) */
+      document.getElementById('btn-panel-close').addEventListener('click', function () {
+        if (!isDirtyPanel) closeDetailPanel();
+      });
+
+      /* [Cancel] — restore snapshot and close */
+      document.getElementById('btn-panel-cancel').addEventListener('click', cancelEdit);
+
+      /* [Confirm] — validate and save */
+      document.getElementById('btn-panel-confirm').addEventListener('click', confirmEdit);
+
+      /* Dirty-flag tracking: mark panel dirty on any field change (T021) */
+      document.getElementById('edit-name').addEventListener('input', markPanelDirty);
+      document.getElementById('edit-tags').addEventListener('input', markPanelDirty);
+      document.getElementById('edit-details').addEventListener('input', markPanelDirty);
+      document.getElementById('edit-size').addEventListener('change', markPanelDirty);
+
+      /* Panel tab order: Name → Tags → Size → Details → Confirm → Name (T022) */
+      document.getElementById('edit-name').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('edit-tags').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('btn-panel-confirm').focus(); }
+      });
+      document.getElementById('edit-tags').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('edit-size').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('edit-name').focus(); }
+      });
+      document.getElementById('edit-size').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('edit-details').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('edit-tags').focus(); }
+      });
+      document.getElementById('edit-details').addEventListener('keydown', function (e) {
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); document.getElementById('btn-panel-confirm').focus(); }
+        if (e.key === 'Tab' && e.shiftKey)  { e.preventDefault(); document.getElementById('edit-size').focus(); }
+      });
+
+      /* Delete flow (T024) */
+      document.getElementById('btn-panel-delete').addEventListener('click', function () {
+        document.getElementById('delete-confirm').style.display = 'block';
+      });
+      document.getElementById('btn-delete-cancel').addEventListener('click', function () {
+        document.getElementById('delete-confirm').style.display = 'none';
+      });
+      document.getElementById('btn-delete-yes').addEventListener('click', function () {
+        var id = selectedInitiativeId;
+        if (!id) return;
+        initiatives = initiatives.filter(function (it) { return it.id !== id; });
+        inboxItems  = inboxItems.filter(function (it) { return it.id !== id; });
+        renderCanvas();
+        renderInbox();
+        setDirty(true);
+        closeDetailPanel();
+      });
+
+      /* ── Report view listeners (T040–T048 / B4) ───────────────────────── */
+
+      /* T040: [📊 Report] — switch to report view */
+      document.getElementById('btn-report').addEventListener('click', function () {
+        currentView = 'report';
+        document.getElementById('canvas-wrapper').style.display = 'none';
+        document.getElementById('report-view').style.display   = 'flex';
+        renderReportView();
+      });
+
+      /* T040: [← Back to Canvas] — return to canvas view */
+      document.getElementById('btn-back-canvas').addEventListener('click', function () {
+        currentView = 'canvas';
+        document.getElementById('report-view').style.display   = 'none';
+        document.getElementById('canvas-wrapper').style.display = '';
+        renderCanvas();
+      });
+
+      /* T042: Keyboard navigation on report table (cell-level, not in edit mode) */
+      document.getElementById('report-table').addEventListener('keydown', function (e) {
+        var cell = e.target.closest('.editable-cell');
+        if (!cell) return;
+        /* Ignore when the target is an editor widget inside the cell */
+        if (e.target !== cell) return;
+
+        var rowIdx    = parseInt(cell.dataset.rowIdx, 10);
+        var colIdx    = parseInt(cell.dataset.colIdx, 10);
+        var totalRows = initiatives.length;
+        var totalCols = 4; /* Name, Tags, Size, Details */
+        var newRow = rowIdx;
+        var newCol = colIdx;
+
+        switch (e.key) {
+          case 'ArrowUp':    e.preventDefault(); newRow = Math.max(0, rowIdx - 1); break;
+          case 'ArrowDown':  e.preventDefault(); newRow = Math.min(totalRows - 1, rowIdx + 1); break;
+          case 'ArrowLeft':  e.preventDefault(); newCol = Math.max(0, colIdx - 1); break;
+          case 'ArrowRight': e.preventDefault(); newCol = Math.min(totalCols - 1, colIdx + 1); break;
+          case 'Tab':
+            e.preventDefault();
+            if (e.shiftKey) {
+              newCol--;
+              if (newCol < 0) { newCol = totalCols - 1; newRow = Math.max(0, newRow - 1); }
+            } else {
+              newCol++;
+              if (newCol >= totalCols) { newCol = 0; newRow = Math.min(totalRows - 1, newRow + 1); }
+            }
+            break;
+          case 'Enter':
+            e.preventDefault();
+            activateCellEdit(cell);
+            return;
+          default: return;
+        }
+
+        var targetCell = document.querySelector(
+          '#report-table .editable-cell[data-row-idx="' + newRow + '"][data-col-idx="' + newCol + '"]'
+        );
+        if (targetCell) targetCell.focus();
+      });
+
+      /* T045: Click-to-edit on editable cells */
+      document.getElementById('report-table').addEventListener('click', function (e) {
+        var cell = e.target.closest('.editable-cell');
+        if (!cell || cell.classList.contains('editing')) return;
+        activateCellEdit(cell);
+      });
+
+      /* T046: Select-all checkbox in <thead> */
+      document.getElementById('select-all-checkbox').addEventListener('change', function () {
+        var checked = this.checked;
+        document.querySelectorAll('#report-table .row-checkbox').forEach(function (cb) {
+          cb.checked = checked;
+        });
+      });
+
+      /* T047: Bulk tag apply */
+      document.getElementById('btn-bulk-apply').addEventListener('click', function () {
+        var msgEl = document.getElementById('bulk-tag-msg');
+        var input = document.getElementById('bulk-tag-input');
+
+        var checkedIds = [];
+        document.querySelectorAll('#report-table .row-checkbox:checked').forEach(function (cb) {
+          checkedIds.push(cb.dataset.id);
+        });
+
+        if (checkedIds.length === 0) {
+          msgEl.textContent = 'No initiatives selected';
+          return;
+        }
+
+        var tagValue  = input.value.trim();
+        var tagResult = validateTags(tagValue);
+        if (!tagResult.valid || tagResult.tokens.length === 0) {
+          msgEl.textContent = 'Use # prefix — e.g. #reviewed';
+          return;
+        }
+
+        msgEl.textContent = '';
+        var tag = tagResult.tokens[0]; /* single tag per bulk operation */
+
+        checkedIds.forEach(function (id) {
+          for (var i = 0; i < initiatives.length; i++) {
+            if (initiatives[i].id === id) {
+              if (!Array.isArray(initiatives[i].tmm.tags)) initiatives[i].tmm.tags = [];
+              if (initiatives[i].tmm.tags.indexOf(tag) === -1) initiatives[i].tmm.tags.push(tag);
+              break;
+            }
+          }
+        });
+
+        setDirty(true);
+        renderReportView();
+      });
+
+      /* T048: Export Markdown */
+      document.getElementById('btn-export-md').addEventListener('click', exportMarkdown);
+
+      /* Initial render — empty canvas with four quadrant headings visible. */
+      renderCanvas();
+      renderInbox();
+
+      /* Rescale dots when the canvas is resized (e.g. window resize, panel open/close). */
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(function () { renderCanvas(); })
+          .observe(document.getElementById('canvas'));
+      }
+    </script>
+  </body>
+</html>
