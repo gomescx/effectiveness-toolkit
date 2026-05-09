@@ -136,12 +136,12 @@
 
 **Independent Test**: Add two initiatives — assign XS to one and XL to the other. View the canvas — confirm XL dot is visually larger. Add a third with no size — confirm its dot is hollow at M diameter (32px). Save; reload — confirm all three sizes restore correctly and dots render at the expected diameters. Open detail panel for the XS initiative — confirm XS is pre-selected in the Size dropdown.
 
-- [ ] T033 [B2] [US7] In `public/tools/tmm/index.html`, wire the Size `<select>` (`#edit-size`) in the detail panel: `confirmEdit()` reads `#edit-size` value; stores `value || null` as `initiative.tmm.size`; calls `renderCanvas()` (already done in A4 — verify the size field is read and stored correctly)
-- [ ] T034 [B2] [US7] In `public/tools/tmm/index.html`, call `applyDotSize(dotEl, initiative.tmm.size)` for every dot rendered in `renderCanvas()` (replaces any previous fixed-diameter style on dots)
-- [ ] T035 [B2] [US7] In `public/tools/tmm/index.html`, update `openDetailPanel()` populate step: set `#edit-size` value to `initiative.tmm.size || ''` so the correct option is pre-selected on panel open
-- [ ] T036 [B2] [US7] In `public/tools/tmm/index.html`, update `saveToFile()`: write `size` field to `initiative.tmm.size` (may be `null`)
-- [ ] T037 [B2] [US7] In `public/tools/tmm/index.html`, update `loadFromFile()`: read `tmm.size`; validate against enum `['XS','S','M','L','XL']`; default to `null` if absent or invalid
-- [ ] T038 [B2] [US7] In `public/tools/tmm/index.html`, ensure `submitInboxEntry()` in the Inbox form reads `#inbox-size` value and stores `value || null` as `initiative.tmm.size` (this was scaffolded in A2/T013 — verify size is stored and not discarded)
+- [X] T033 [B2] [US7] In `public/tools/tmm/index.html`, wire the Size `<select>` (`#edit-size`) in the detail panel: `confirmEdit()` reads `#edit-size` value; stores `value || null` as `initiative.tmm.size`; calls `renderCanvas()` (already done in A4 — verify the size field is read and stored correctly)
+- [X] T034 [B2] [US7] In `public/tools/tmm/index.html`, call `applyDotSize(dotEl, initiative.tmm.size)` for every dot rendered in `renderCanvas()` (replaces any previous fixed-diameter style on dots)
+- [X] T035 [B2] [US7] In `public/tools/tmm/index.html`, update `openDetailPanel()` populate step: set `#edit-size` value to `initiative.tmm.size || ''` so the correct option is pre-selected on panel open
+- [X] T036 [B2] [US7] In `public/tools/tmm/index.html`, update `saveToFile()`: write `size` field to `initiative.tmm.size` (may be `null`)
+- [X] T037 [B2] [US7] In `public/tools/tmm/index.html`, update `loadFromFile()`: read `tmm.size`; validate against enum `['XS','S','M','L','XL']`; default to `null` if absent or invalid
+- [X] T038 [B2] [US7] In `public/tools/tmm/index.html`, ensure `submitInboxEntry()` in the Inbox form reads `#inbox-size` value and stores `value || null` as `initiative.tmm.size` (this was scaffolded in A2/T013 — verify size is stored and not discarded)
 
 **Checkpoint**: US7 complete — size-proportional dots, hollow null dot, save/load all independently testable
 

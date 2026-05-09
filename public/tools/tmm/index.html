@@ -1150,13 +1150,27 @@
 
       /* ════════════════════════════════════════════════════════════════════
          applyDotSize (T005)
-         Applies width/height from SIZE_DIAMETER map to a dot element.
-         Null size → hollow dot (transparent bg, primary border).
+         Sizes a dot proportionally to the live canvas width.
+         Null size → hollow dot at M diameter.
          ════════════════════════════════════════════════════════════════════ */
-      var SIZE_DIAMETER = { XS: 16, S: 24, M: 32, L: 44, XL: 58 };
 
-      function applyDotSize(dotEl, size) {
-        var d = size ? SIZE_DIAMETER[size] : 32;
+      /**
+       * Apply size-proportional dimensions to a dot element.
+       * @param {HTMLElement} dotEl  - the dot div
+       * @param {string|null} size   - 'XS'|'S'|'M'|'L'|'XL'|null
+       * @param {number}      cw     - live canvas width in px
+       */
+      function applyDotSize(dotEl, size, cw) {
+        var qw = cw / 2; /* one quadrant width */
+        var d;
+        switch (size) {
+          case 'XS': d = qw / 16;               break;
+          case 'S':  d = cw * 11 / 128;         break;
+          case 'M':  d = cw * 9  / 64;          break;
+          case 'L':  d = cw * 25 / 128;         break;
+          case 'XL': d = cw / 4;                break;
+          default:   d = cw * 9  / 64; /* M */  break; /* null → M hollow */
+        }
         dotEl.style.width  = d + 'px';
         dotEl.style.height = d + 'px';
         if (!size) {
@@ -1517,6 +1531,9 @@
         /* ── T028: Show/hide [× Clear] button ─────────────────────────── */
         document.getElementById('btn-clear-filter').style.display = activeTag ? 'inline-block' : 'none';
 
+        /* Read live canvas width for proportional dot sizing. */
+        var cw = canvas.getBoundingClientRect().width || canvas.offsetWidth || 400;
+
         /* Build one dot per initiative — skip unpositioned (T015). */
         var renderedCount = 0;
         initiatives.forEach(function (initiative) {
@@ -1547,7 +1564,7 @@
           label.textContent = initiative.name;
           dot.appendChild(label);
 
-          applyDotSize(dot, initiative.tmm.size || null);
+          applyDotSize(dot, initiative.tmm.size || null, cw);
 
           /* ── Drag (T017–T019) + click/keyboard (T010) handlers ──── */
           (function attachHandlers(dotEl, init) {
@@ -1946,6 +1963,7 @@
           var originalTmm = (original && original.tmm) ? original.tmm : {};
           saved.tmm = Object.assign({}, originalTmm, {
             tags:     Array.isArray(initiative.tmm.tags) ? initiative.tmm.tags : [],
+            size:     initiative.tmm.size !== undefined ? initiative.tmm.size : null,
             details:  initiative.tmm.details,
             x:        initiative.tmm.x,
             y:        initiative.tmm.y
@@ -2036,6 +2054,7 @@
                   impactMap: item.impactMap !== undefined ? item.impactMap : null,
                   tmm: {
                     tags:    Array.isArray(tmm.tags) ? tmm.tags : [],
+                    size:    ['XS','S','M','L','XL'].indexOf(tmm.size) !== -1 ? tmm.size : null,
                     details:  tmm.details  !== undefined ? tmm.details   : '',
                     /* Clamp coordinates to [0.0, 1.0] (FR-US2.04 / data-model).
                        Default to canvas centre (0.5, 0.5) when no tmm section. */
@@ -2225,6 +2244,12 @@
       /* Initial render — empty canvas with four quadrant headings visible. */
       renderCanvas();
       renderInbox();
+
+      /* Rescale dots when the canvas is resized (e.g. window resize, panel open/close). */
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(function () { renderCanvas(); })
+          .observe(document.getElementById('canvas'));
+      }
     </script>
   </body>
 </html>
