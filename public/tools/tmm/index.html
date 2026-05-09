@@ -2029,7 +2029,11 @@
             if (rawInitiatives.length === 0) {
               initiatives = [];
               activeTag = null;
-              renderCanvas();
+              if (currentView === 'report') {
+                renderReportView();
+              } else {
+                renderCanvas();
+              }
               setDirty(false);
               return;
             }
@@ -2071,7 +2075,11 @@
               });
 
             activeTag = null; /* FR-000.06: reset filter on every load (T031) */
-            renderCanvas();
+            if (currentView === 'report') {
+              renderReportView();
+            } else {
+              renderCanvas();
+            }
             setDirty(false); /* T031 */
 
           } catch (err) {
@@ -2084,6 +2092,299 @@
       /* ════════════════════════════════════════════════════════════════════
          Event listeners
          ════════════════════════════════════════════════════════════════════ */
+      /* ════════════════════════════════════════════════════════════════════
+         Report view (T040–T048 / B4)
+
+         renderReportView  — rebuilds <tbody> from initiatives[]
+         activateCellEdit  — replaces cell text with an editor widget
+         commitCellEdit    — validates, updates state, restores display, advances focus
+         exportMarkdown    — builds GFM table and triggers download
+         ════════════════════════════════════════════════════════════════════ */
+
+      /**
+       * Return the display string for a given field on an initiative.
+       * Used by renderReportView() and commitCellEdit().
+       */
+      function getCellDisplayValue(initiative, field) {
+        if (field === 'name') return initiative.name || '';
+        if (field === 'tags') {
+          var tags = (initiative.tmm && Array.isArray(initiative.tmm.tags)) ? initiative.tmm.tags : [];
+          return tags.join(' ');
+        }
+        if (field === 'size')    return (initiative.tmm && initiative.tmm.size)    ? initiative.tmm.size    : '';
+        if (field === 'details') return (initiative.tmm && initiative.tmm.details) ? initiative.tmm.details : '';
+        return '';
+      }
+
+      /**
+       * Render the report table from initiatives[] (T041).
+       * Rebuilds <tbody> entirely; handles empty state.
+       */
+      function renderReportView() {
+        var tbody = document.querySelector('#report-table tbody');
+        tbody.innerHTML = '';
+
+        /* Reset UI controls */
+        var selectAll = document.getElementById('select-all-checkbox');
+        if (selectAll) selectAll.checked = false;
+        document.getElementById('bulk-tag-msg').textContent  = '';
+        document.getElementById('bulk-tag-input').value      = '';
+
+        if (initiatives.length === 0) {
+          var emptyRow = document.createElement('tr');
+          var emptyTd  = document.createElement('td');
+          emptyTd.setAttribute('colspan', '6');
+          emptyTd.textContent = 'No initiatives yet — go back to the canvas to add your first initiative.';
+          emptyTd.style.cssText = 'text-align:center;padding:24px 16px;color:var(--color-muted);font-style:italic';
+          emptyRow.appendChild(emptyTd);
+          tbody.appendChild(emptyRow);
+          return;
+        }
+
+        initiatives.forEach(function (initiative, rowIdx) {
+          var tr = document.createElement('tr');
+
+          /* Checkbox td */
+          var checkTd = document.createElement('td');
+          var cb      = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className  = 'row-checkbox';
+          cb.dataset.id = initiative.id;
+          checkTd.appendChild(cb);
+          tr.appendChild(checkTd);
+
+          /* Q cell (read-only — short label e.g. "Q1") */
+          var qTd  = document.createElement('td');
+          qTd.className = 'q-cell';
+          var fullQ = deriveQuadrant(
+            typeof initiative.tmm.x === 'number' ? initiative.tmm.x : 0.5,
+            typeof initiative.tmm.y === 'number' ? initiative.tmm.y : 0.5
+          );
+          qTd.textContent = fullQ.split(' ')[0]; /* e.g. "Q1" */
+          tr.appendChild(qTd);
+
+          /* Editable cells: Name, Tags, Size, Details */
+          var editFields = ['name', 'tags', 'size', 'details'];
+          editFields.forEach(function (field, colIdx) {
+            var td = document.createElement('td');
+            td.className  = 'editable-cell';
+            td.tabIndex   = (colIdx === 0 && rowIdx === 0) ? 0 : -1;
+            td.dataset.field  = field;
+            td.dataset.id     = initiative.id;
+            td.dataset.rowIdx = rowIdx;
+            td.dataset.colIdx = colIdx;
+            td.textContent = getCellDisplayValue(initiative, field);
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      /**
+       * Activate inline edit mode on a cell (T043).
+       * Replaces cell text with an input/select/textarea.
+       * Binds Esc (restore), Tab/Enter (commit+advance), blur/Size (commit+stay).
+       */
+      function activateCellEdit(cell) {
+        if (cell.classList.contains('editing')) return;
+
+        var field = cell.dataset.field;
+        var id    = cell.dataset.id;
+
+        /* Locate the initiative */
+        var initiative = null;
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === id) { initiative = initiatives[i]; break; }
+        }
+        if (!initiative) return;
+
+        var snapshot = getCellDisplayValue(initiative, field);
+        cell.classList.add('editing');
+        cell.innerHTML = '';
+
+        /* Build editor widget */
+        var editor;
+        if (field === 'size') {
+          editor = document.createElement('select');
+          ['', 'XS', 'S', 'M', 'L', 'XL'].forEach(function (s) {
+            var opt       = document.createElement('option');
+            opt.value     = s;
+            opt.textContent = s || '(no size)';
+            if (s === (initiative.tmm.size || '')) opt.selected = true;
+            editor.appendChild(opt);
+          });
+        } else if (field === 'details') {
+          editor = document.createElement('textarea');
+          editor.value = snapshot;
+        } else {
+          editor = document.createElement('input');
+          editor.type  = 'text';
+          editor.value = snapshot;
+        }
+
+        var errSpan = document.createElement('span');
+        errSpan.className = 'cell-error';
+        cell.appendChild(editor);
+        cell.appendChild(errSpan);
+        editor.focus();
+        if (editor.select) { try { editor.select(); } catch (ex) { /* ignore */ } }
+
+        /* Keyboard bindings (T043) */
+        editor.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            cell.classList.remove('editing');
+            cell.innerHTML   = '';
+            cell.textContent = snapshot;
+            cell.tabIndex    = 0;
+            cell.focus();
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            e.stopPropagation();
+            commitCellEdit(cell, e.shiftKey ? -1 : 1);
+          } else if (e.key === 'Enter' && field !== 'details') {
+            e.preventDefault();
+            e.stopPropagation();
+            commitCellEdit(cell, 1);
+          }
+        });
+
+        /* Commit on blur for all editor types — covers clicks on Back to Canvas,
+           Save, Bulk Apply, etc. that steal focus without Tab/Enter (T043).
+           setTimeout lets Tab/Enter fire first; the 'editing' guard prevents
+           double-commit since those paths already remove the class. */
+        editor.addEventListener('blur', function () {
+          setTimeout(function () {
+            if (cell.classList.contains('editing')) commitCellEdit(cell, 0);
+          }, 150);
+        });
+      }
+
+      /**
+       * Commit an in-progress cell edit: validate, update state, restore display,
+       * and advance focus (T044).
+       * @param {HTMLElement} cell      - the <td> in edit mode
+       * @param {number}      direction - 1=next, -1=prev, 0=stay
+       */
+      function commitCellEdit(cell, direction) {
+        if (!cell.classList.contains('editing')) return;
+
+        var field   = cell.dataset.field;
+        var id      = cell.dataset.id;
+        var editor  = cell.querySelector('input, select, textarea');
+        var errSpan = cell.querySelector('.cell-error');
+        if (!editor) return;
+
+        /* Locate the initiative */
+        var initiative = null;
+        for (var i = 0; i < initiatives.length; i++) {
+          if (initiatives[i].id === id) { initiative = initiatives[i]; break; }
+        }
+        if (!initiative) return;
+
+        var value = editor.value;
+
+        /* Field-specific validation and update */
+        if (field === 'name') {
+          var trimmed = value.trim();
+          if (!trimmed) {
+            if (errSpan) { errSpan.textContent = 'Name is required'; errSpan.style.display = 'block'; }
+            editor.focus();
+            return;
+          }
+          initiative.name = trimmed;
+
+        } else if (field === 'tags') {
+          var tagsRaw = value.trim();
+          if (tagsRaw) {
+            var tagResult = validateTags(tagsRaw);
+            if (!tagResult.valid) {
+              if (errSpan) { errSpan.textContent = 'Use # prefix — e.g. #health'; errSpan.style.display = 'block'; }
+              editor.focus();
+              return;
+            }
+            initiative.tmm.tags = tagResult.tokens;
+          } else {
+            initiative.tmm.tags = [];
+          }
+
+        } else if (field === 'size') {
+          initiative.tmm.size = value || null;
+
+        } else if (field === 'details') {
+          initiative.tmm.details = value;
+        }
+
+        /* Success — clear error, mark dirty, restore cell to text display */
+        if (errSpan) errSpan.style.display = 'none';
+        setDirty(true);
+
+        var newDisplay = getCellDisplayValue(initiative, field);
+        cell.classList.remove('editing');
+        cell.innerHTML   = '';
+        cell.textContent = newDisplay;
+        cell.tabIndex    = 0;
+
+        /* Advance focus (T044) */
+        if (direction !== 0) {
+          var rowIdx    = parseInt(cell.dataset.rowIdx, 10);
+          var colIdx    = parseInt(cell.dataset.colIdx, 10);
+          var totalCols = 4;
+          var totalRows = initiatives.length;
+          var newRow    = rowIdx;
+          var newCol    = colIdx + direction;
+
+          if (newCol >= totalCols) { newCol = 0; newRow = Math.min(totalRows - 1, newRow + 1); }
+          if (newCol < 0)          { newCol = totalCols - 1; newRow = Math.max(0, newRow - 1); }
+
+          var nextCell = document.querySelector(
+            '#report-table .editable-cell[data-row-idx="' + newRow + '"][data-col-idx="' + newCol + '"]'
+          );
+          if (nextCell) nextCell.focus(); else cell.focus();
+        } else {
+          cell.focus();
+        }
+      }
+
+      /**
+       * Build a GFM table from initiatives[] and trigger a .md download (T048).
+       */
+      function exportMarkdown() {
+        var header    = '| Quadrant | Name | Tags | Size | Details |';
+        var separator = '|---|---|---|---|---|';
+
+        var rows = initiatives.map(function (initiative) {
+          var q       = deriveQuadrant(
+            typeof initiative.tmm.x === 'number' ? initiative.tmm.x : 0.5,
+            typeof initiative.tmm.y === 'number' ? initiative.tmm.y : 0.5
+          );
+          var name    = (initiative.name || '').replace(/\|/g, '\\|');
+          var tags    = ((initiative.tmm && Array.isArray(initiative.tmm.tags))
+                           ? initiative.tmm.tags : []).join(' ').replace(/\|/g, '\\|');
+          var size    = (initiative.tmm && initiative.tmm.size) ? initiative.tmm.size : '';
+          var details = ((initiative.tmm && initiative.tmm.details) ? initiative.tmm.details : '')
+                           .replace(/\r?\n/g, ' ').replace(/\|/g, '\\|');
+          return '| ' + q + ' | ' + name + ' | ' + tags + ' | ' + size + ' | ' + details + ' |';
+        });
+
+        var md   = [header, separator].concat(rows).join('\n');
+        var blob = new Blob([md], { type: 'text/markdown' });
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'effectiveness-toolkit-tmm-report.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      /* ════════════════════════════════════════════════════════════════════
+         Event listeners
+         ════════════════════════════════════════════════════════════════════ */
+
       document.getElementById('btn-save').addEventListener('click', saveToFile);
       document.getElementById('btn-load').addEventListener('click', triggerLoad);
 
@@ -2242,6 +2543,123 @@
         setDirty(true);
         closeDetailPanel();
       });
+
+      /* ── Report view listeners (T040–T048 / B4) ───────────────────────── */
+
+      /* T040: [📊 Report] — switch to report view */
+      document.getElementById('btn-report').addEventListener('click', function () {
+        currentView = 'report';
+        document.getElementById('canvas-wrapper').style.display = 'none';
+        document.getElementById('report-view').style.display   = 'flex';
+        renderReportView();
+      });
+
+      /* T040: [← Back to Canvas] — return to canvas view */
+      document.getElementById('btn-back-canvas').addEventListener('click', function () {
+        currentView = 'canvas';
+        document.getElementById('report-view').style.display   = 'none';
+        document.getElementById('canvas-wrapper').style.display = '';
+        renderCanvas();
+      });
+
+      /* T042: Keyboard navigation on report table (cell-level, not in edit mode) */
+      document.getElementById('report-table').addEventListener('keydown', function (e) {
+        var cell = e.target.closest('.editable-cell');
+        if (!cell) return;
+        /* Ignore when the target is an editor widget inside the cell */
+        if (e.target !== cell) return;
+
+        var rowIdx    = parseInt(cell.dataset.rowIdx, 10);
+        var colIdx    = parseInt(cell.dataset.colIdx, 10);
+        var totalRows = initiatives.length;
+        var totalCols = 4; /* Name, Tags, Size, Details */
+        var newRow = rowIdx;
+        var newCol = colIdx;
+
+        switch (e.key) {
+          case 'ArrowUp':    e.preventDefault(); newRow = Math.max(0, rowIdx - 1); break;
+          case 'ArrowDown':  e.preventDefault(); newRow = Math.min(totalRows - 1, rowIdx + 1); break;
+          case 'ArrowLeft':  e.preventDefault(); newCol = Math.max(0, colIdx - 1); break;
+          case 'ArrowRight': e.preventDefault(); newCol = Math.min(totalCols - 1, colIdx + 1); break;
+          case 'Tab':
+            e.preventDefault();
+            if (e.shiftKey) {
+              newCol--;
+              if (newCol < 0) { newCol = totalCols - 1; newRow = Math.max(0, newRow - 1); }
+            } else {
+              newCol++;
+              if (newCol >= totalCols) { newCol = 0; newRow = Math.min(totalRows - 1, newRow + 1); }
+            }
+            break;
+          case 'Enter':
+            e.preventDefault();
+            activateCellEdit(cell);
+            return;
+          default: return;
+        }
+
+        var targetCell = document.querySelector(
+          '#report-table .editable-cell[data-row-idx="' + newRow + '"][data-col-idx="' + newCol + '"]'
+        );
+        if (targetCell) targetCell.focus();
+      });
+
+      /* T045: Click-to-edit on editable cells */
+      document.getElementById('report-table').addEventListener('click', function (e) {
+        var cell = e.target.closest('.editable-cell');
+        if (!cell || cell.classList.contains('editing')) return;
+        activateCellEdit(cell);
+      });
+
+      /* T046: Select-all checkbox in <thead> */
+      document.getElementById('select-all-checkbox').addEventListener('change', function () {
+        var checked = this.checked;
+        document.querySelectorAll('#report-table .row-checkbox').forEach(function (cb) {
+          cb.checked = checked;
+        });
+      });
+
+      /* T047: Bulk tag apply */
+      document.getElementById('btn-bulk-apply').addEventListener('click', function () {
+        var msgEl = document.getElementById('bulk-tag-msg');
+        var input = document.getElementById('bulk-tag-input');
+
+        var checkedIds = [];
+        document.querySelectorAll('#report-table .row-checkbox:checked').forEach(function (cb) {
+          checkedIds.push(cb.dataset.id);
+        });
+
+        if (checkedIds.length === 0) {
+          msgEl.textContent = 'No initiatives selected';
+          return;
+        }
+
+        var tagValue  = input.value.trim();
+        var tagResult = validateTags(tagValue);
+        if (!tagResult.valid || tagResult.tokens.length === 0) {
+          msgEl.textContent = 'Use # prefix — e.g. #reviewed';
+          return;
+        }
+
+        msgEl.textContent = '';
+        var tag = tagResult.tokens[0]; /* single tag per bulk operation */
+
+        checkedIds.forEach(function (id) {
+          for (var i = 0; i < initiatives.length; i++) {
+            if (initiatives[i].id === id) {
+              if (!Array.isArray(initiatives[i].tmm.tags)) initiatives[i].tmm.tags = [];
+              if (initiatives[i].tmm.tags.indexOf(tag) === -1) initiatives[i].tmm.tags.push(tag);
+              break;
+            }
+          }
+        });
+
+        setDirty(true);
+        renderReportView();
+      });
+
+      /* T048: Export Markdown */
+      document.getElementById('btn-export-md').addEventListener('click', exportMarkdown);
 
       /* Initial render — empty canvas with four quadrant headings visible. */
       renderCanvas();
