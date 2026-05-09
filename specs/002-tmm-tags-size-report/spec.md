@@ -88,6 +88,8 @@ A PEP coach or executive switches from the canvas to a Report view that lists al
 - **Long tags list display**: An initiative with ten or more tags displays in the detail panel without breaking the layout or overflowing its container.
 - **Null size in canvas and export**: Initiatives with no size set render at the default dot diameter on the canvas and produce a blank Size cell in exported markdown — no placeholder leaks.
 - **State sync — single source of truth**: Returning to the canvas after any report action never reconstructs initiative state from DOM elements or table rows; the shared in-memory initiatives array is always the authoritative source.
+- **Load while Report view is active**: Loading a file while the Report view is visible MUST refresh the Report table immediately — the user MUST NOT need to navigate to canvas and back to see the newly loaded data.
+- **Empty canvas hint**: When no initiatives have been positioned on the canvas and no filter is active, a centred hint "Load a matrix or click [+ Quick Add] to get started" is visible. The hint disappears as soon as at least one initiative is placed on the canvas.
 - **Report Tags cell — invalid commit**: Typing a tag without `#` prefix in a Report Tags cell and pressing Tab/Enter is blocked; an inline error is shown; the original value is preserved until a valid value is committed or Esc is pressed.
 - **Report cell — Esc during edit**: Pressing Esc while a Report cell is in edit mode discards all typed input and restores the cell to the value it held when Enter was pressed to open edit mode.
 
@@ -139,6 +141,7 @@ A PEP coach or executive switches from the canvas to a Report view that lists al
 - **FR-000.05**: The `category` field is removed from this tool's data model; no migration logic is required; the field is silently ignored on load.
 - **FR-000.06**: Canvas tag filter state MUST NOT be persisted to the project file; filter state is session-only and MUST reset to "no filter active" on each project load.
 - **FR-000.07**: The canvas and report views MUST share a single in-memory initiatives array; neither view MAY reconstruct initiative state from the DOM or from rendered table rows.
+- **FR-000.08**: When a file is loaded via `loadFromFile()`, the active view MUST be re-rendered immediately — if `currentView === 'report'` then `renderReportView()` MUST be called; if `currentView === 'canvas'` then `renderCanvas()` MUST be called. The user MUST NOT need to switch views to see the newly loaded data.
 
 ### Key Entities
 
