@@ -110,8 +110,8 @@ A PEP coach or executive switches from the canvas to a Report view that lists al
 
 - **FR-US7.01**: The detail panel MUST include a Size field presenting five discrete options: XS, S, M, L, XL; a blank "none" (null) option MUST be available and selected by default for new initiatives.
 - **FR-US7.02**: Saving a size selection MUST cause the initiative's canvas dot to render at the diameter corresponding to that size on the next canvas render.
-- **FR-US7.03**: The tool MUST support five visually distinct dot diameters, one per size value (XS through XL); no two size values may produce the same rendered dot diameter.
-- **FR-US7.04**: An initiative with null size MUST render at the same default diameter as initiatives that pre-date this feature (equivalent to the current 32px default) — no visual regression.
+- **FR-US7.03**: The tool MUST support five visually distinct dot diameters, one per size value (XS through XL), proportional to the canvas quadrant width at render time: XS = 1/16 of a quadrant, XL = 1/2 of a quadrant, S/M/L linearly interpolated between them. Dot diameters MUST rescale automatically when the canvas is resized (e.g. via ResizeObserver); no two size values may produce the same diameter.
+- **FR-US7.04**: An initiative with null size MUST render as a hollow outlined circle at the M-equivalent diameter (midpoint of the XS–XL proportional scale); this diameter scales with the canvas identically to an explicitly M-sized initiative.
 - **FR-US7.05**: The size value MUST survive a save/reload cycle; a saved value of "L" MUST be restored as "L" and rendered at the L dot diameter.
 - **FR-US7.06**: Size is a single value per initiative (not an array); the Size field MUST accept exactly one selection or null.
 

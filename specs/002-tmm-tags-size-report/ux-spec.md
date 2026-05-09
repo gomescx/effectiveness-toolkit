@@ -316,10 +316,10 @@ Copilot must not omit these — they are not optional enhancements.
 | FR-UX-015 | The Q column in the Report view MUST display short labels (Q1–Q4) and MUST be read-only and non-selectable. Repositioning requires returning to the canvas. |
 | FR-UX-016 | Editing an initiative's Name in the Report view or detail panel MUST NOT change its unique ID. The ID is the stable cross-tool identifier for COER and Memory Map integration. |
 | FR-UX-017 | Tags validation (space-separated #token format) MUST be enforced in both the detail panel and the Report view Tags cell. An invalid token MUST prevent the cell or form from committing; an inline error MUST be shown — e.g. "Use # prefix — e.g. #health". |
-| FR-UX-018 | Five t-shirt sizes (XS–XL) MUST map to five visually distinct filled dot diameters on the canvas. Null/unset size MUST render as a hollow outlined circle at M diameter — same size as M but unfilled. This distinguishes "not yet sized" from "explicitly set to M" without a legend. |
+| FR-UX-018 | Five t-shirt sizes (XS–XL) MUST map to five visually distinct filled dot diameters on the canvas, proportional to the canvas quadrant width: XS = 1/16 of a quadrant, XL = 1/2 of a quadrant, S/M/L linearly interpolated between them. Diameters MUST rescale when the canvas is resized. Null/unset size MUST render as a hollow outlined circle at the M-equivalent diameter — same size as M but unfilled. This distinguishes "not yet sized" from "explicitly set to M" without a legend. |
 | FR-UX-019 | The tool targets desktop and laptop screens only. No responsive layout or mobile touch-target sizing is required. |
 | FR-UX-020 | Dragging an initiative from the Inbox and dropping it onto the canvas MUST place a dot at the drop coordinates, remove the initiative from the Inbox list, and decrement the Inbox count badge. The drop position becomes the initiative's stored x/y coordinates immediately. |
-| FR-UX-021 | An initiative with null size MUST render as a hollow outlined circle (border visible, no fill) at M diameter. An initiative with size explicitly set to M MUST render as a filled dot at M diameter. The distinction signals "sizing not yet done" at a glance. |
+| FR-UX-021 | An initiative with null size MUST render as a hollow outlined circle (border visible, no fill) at the M-equivalent diameter (proportional to canvas quadrant width). An initiative with size explicitly set to M MUST render as a filled dot at the same diameter. The distinction signals "sizing not yet done" at a glance. |
 
 ---
 

@@ -69,32 +69,36 @@ Two strategies were evaluated:
 
 ### Question
 
-FR-UX-018 requires five visually distinct dot diameters for XS–XL. What diameter values produce clear visual distinction at typical desktop resolutions? The current null-size default is 32px.
+FR-UX-018 requires five visually distinct dot diameters for XS–XL that rescale with the canvas. What proportional scale produces clear visual distinction and remains consistent at any window size?
 
 ### Findings
 
-Evaluating a linear scale anchored at M = 32px (existing default):
+Fixed-pixel values (original decision: XS=16px…XL=58px) were rejected during testing because dots did not rescale when the browser window was resized, and the size differences were not visually distinct enough at larger canvas sizes.
 
-| Size | Linear (step 8px) | Notes |
+Proportional sizing anchored to quadrant width resolves both issues:
+
+| Size | Formula | At 600px canvas (300px quadrant) |
 |---|---|---|
-| XS | 16px | Clearly smallest; still clickable (> 12px tap target) |
-| S | 24px | Distinct from XS and M |
-| M | 32px | Existing default — no visual regression for null |
-| L | 44px | Clearly larger than M |
-| XL | 58px | Clear maximum; fits within Q cells at minimum canvas size |
+| XS | quadrantWidth / 16 | ≈ 19px |
+| S  | canvasWidth × 11/128 | ≈ 52px |
+| M  | canvasWidth × 9/64  | ≈ 84px |
+| L  | canvasWidth × 25/128 | ≈ 117px |
+| XL | canvasWidth / 4     | ≈ 150px |
 
-Null (unset) must render as a hollow outlined circle at M diameter (32px) per FR-UX-021. Visually distinct from M-filled because fill is absent.
+Null (unset) renders as a hollow outlined circle at the M-equivalent diameter (same proportional formula, `background: transparent; border: 2px solid var(--color-primary)`).
 
 ### Decision
 
-Diameter mapping: `XS=16px, S=24px, M=32px, L=44px, XL=58px`. Null renders as hollow circle at 32px (same as M but `background: transparent; border: 2px solid var(--color-primary)`).
+Diameters are calculated at render time from live canvas width. `applyDotSize(dotEl, size, canvasWidth)` replaces the static `SIZE_DIAMETER` map. A `ResizeObserver` on `#canvas` triggers `renderCanvas()` on resize.
+
+Proportions: XS = 1/16 of a quadrant, XL = 1/2 of a quadrant, S/M/L linearly interpolated. (Updated 2026-05-09 after testing revealed fixed-pixel approach failed on resize.)
 
 ### Rationale
 
-- Anchors M at the existing 32px default → zero visual regression for existing files
-- Step sizes increase non-linearly (8, 8, 12, 14) to compensate for perceptual area scaling (larger circles need more diameter difference to appear distinct)
-- XS at 16px is still 2× above minimum touch target and clearly clickable on desktop
-- XL at 58px fits comfortably within a quadrant cell at 400px canvas width (< 15% of cell width)
+- Proportional to canvas → consistent visual weight at any window size
+- XL at 1/2 quadrant is dramatic and clearly the largest; XS at 1/16 quadrant is clearly smallest
+- Linear interpolation between XS and XL gives four visually distinct steps
+- ResizeObserver is broadly supported in modern evergreen browsers (target platform)
 
 ---
 

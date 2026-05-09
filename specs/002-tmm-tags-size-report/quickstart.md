@@ -103,12 +103,20 @@ function validateTags(input) {
 }
 ```
 
-### Dot rendering with size
+### Dot rendering with size (proportional to canvas)
 ```javascript
-var SIZE_DIAMETER = { XS: 16, S: 24, M: 32, L: 44, XL: 58 };
-
-function applyDotSize(dotEl, size) {
-  var d = size ? SIZE_DIAMETER[size] : 32;
+// canvasWidth = document.getElementById('canvas').getBoundingClientRect().width
+// Diameters scale with the canvas; ResizeObserver on #canvas calls renderCanvas() on resize.
+function applyDotSize(dotEl, size, canvasWidth) {
+  var q = canvasWidth / 2; // quadrant width
+  var sizes = {
+    XS: q / 16,
+    S:  canvasWidth * 11 / 128,
+    M:  canvasWidth * 9  / 64,
+    L:  canvasWidth * 25 / 128,
+    XL: canvasWidth / 4
+  };
+  var d = size ? sizes[size] : sizes.M; // null = M-equivalent, hollow
   dotEl.style.width  = d + 'px';
   dotEl.style.height = d + 'px';
   if (!size) {
