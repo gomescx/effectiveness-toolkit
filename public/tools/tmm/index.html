@@ -935,6 +935,9 @@
           <!-- Filter empty-state message (T029 / B1) -->
           <div id="filter-empty-msg" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:var(--font-size-sm); color:var(--color-muted); pointer-events:none; text-align:center; white-space:nowrap;">No initiatives match this filter</div>
 
+          <!-- Empty canvas hint (T049 / FR-UX-001) — shown when no dots are on the canvas -->
+          <div id="canvas-empty-hint" style="display:block; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:var(--font-size-sm); color:var(--color-muted); pointer-events:none; text-align:center; white-space:nowrap;">Load a matrix or click [+ Quick Add] to get started</div>
+
           <!-- X-axis labels (Urgency) — left: More Urgent, right: Less Urgent -->
           <div class="axis-x-labels" aria-hidden="true">
             <span class="axis-x-label">More Urgent</span>
@@ -1686,6 +1689,13 @@
         var emptyMsg = document.getElementById('filter-empty-msg');
         if (emptyMsg) {
           emptyMsg.style.display = (activeTag !== null && renderedCount === 0) ? 'block' : 'none';
+        }
+
+        /* ── T049 / FR-UX-001: Show empty-canvas hint when no dots are positioned ── */
+        var positionedCount = initiatives.filter(function (i) { return i.tmm && i.tmm.x !== null; }).length;
+        var emptyHint = document.getElementById('canvas-empty-hint');
+        if (emptyHint) {
+          emptyHint.style.display = (positionedCount === 0) ? 'block' : 'none';
         }
       }
 
