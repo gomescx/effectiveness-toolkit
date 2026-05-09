@@ -155,7 +155,7 @@
 
 **Independent Test**: Open the tool — confirm no banner visible. Add an initiative via Quick Add and drag it to canvas — confirm red banner appears. Click `[💾 Save]` — confirm banner disappears. Reload the file — confirm banner is absent. Make any edit via detail panel Confirm — confirm banner reappears. Switch to Report view — confirm banner is still visible there.
 
-- [ ] T039 [B3] In `public/tools/tmm/index.html`, verify `#unsaved-banner` HTML is in place (added in T008) and `setDirty()` helper is implemented (added in T006); audit all mutation call sites and confirm `setDirty(true)` is called for: `submitInboxEntry()`, inbox `[×]` remove, successful `pointerup` drop onto canvas (drag-to-canvas), `confirmEdit()`, `[Yes, delete]` (delete initiative), and any canvas dot drag-reposition; confirm `setDirty(false)` is called in `saveToFile()` on success and in `loadFromFile()` on success
+- [X] T039 [B3] In `public/tools/tmm/index.html`, verify `#unsaved-banner` HTML is in place (added in T008) and `setDirty()` helper is implemented (added in T006); audit all mutation call sites and confirm `setDirty(true)` is called for: `submitInboxEntry()`, inbox `[×]` remove, successful `pointerup` drop onto canvas (drag-to-canvas), `confirmEdit()`, `[Yes, delete]` (delete initiative), and any canvas dot drag-reposition; confirm `setDirty(false)` is called in `saveToFile()` on success and in `loadFromFile()` on success
 
 **Checkpoint**: B3 complete — banner wiring verified across all mutation points
 

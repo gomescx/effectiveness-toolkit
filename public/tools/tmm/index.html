@@ -1666,6 +1666,7 @@
               }
 
               renderCanvas();
+              setDirty(true);
             });
 
             /* Keyboard: Enter / Space opens the panel */
@@ -1990,6 +1991,7 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        setDirty(false);
       }
 
       /* ════════════════════════════════════════════════════════════════════
