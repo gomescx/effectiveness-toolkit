@@ -1,5 +1,13 @@
 # Memory Map Action Planner
 
+> ## 📦 Archived — POC complete (July 2026)
+>
+> This repository was the **proof of concept** for the Effectiveness Toolkit: a digital version of the five PEP effectiveness tools (Memory Map Action Planner, Clarity of End Result, Time Management Matrix, Strength of Belief, Impact Map). The POC succeeded — the first three tools were built and used in anger for over a year, and each proved its individual value.
+>
+> **What the POC also proved is that the tools must be integrated.** Running a real initiative means moving data between the memory map, the prioritization matrix, and the action plan; as standalone tools this produced dozens of unrelated files, manual re-entry, and error-prone map→plan translation. That integration spine is the MVP's mission — see [mvp-stage-mission.md](mvp-stage-mission.md) for the full review, PO decisions, and research.
+>
+> **The MVP takes a different architecture** — an Obsidian-vault hub (markdown-native living documents, Canvas/Excalidraw for the diagram tools, minimal custom code) instead of this custom React SPA — so it continues in a fresh repository: **`effectiveness-obsidian-toolkit`**. This repo is archived read-only; the deployed GitHub Pages app remains available as a working fallback during the MVP build.
+
 > *"From messy ideas to clear action — in minutes."*
 
 An offline-first visual planning tool that transforms mind maps into structured, actionable plans. Built to support the Personal Efficiency Program (PEP) methodology, this application combines the creative freedom of mind mapping with essential planning attributes like time tracking, task sequencing, and export capabilities.
